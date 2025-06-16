@@ -1,0 +1,16 @@
+#6  0x00005555563fc473 in std::panicking::rust_panic_with_hook () at library/std/src/panicking.rs:835
+#7  0x00005555563fc23a in std::panicking::begin_panic_handler::{closure#0} () at library/std/src/panicking.rs:706
+#8  0x00005555563f8459 in std::sys::backtrace::__rust_end_short_backtrace<std::panicking::begin_panic_handler::{closure_env#0}, !> () at library/std/src/sys/backtrace.rs:168
+#9  0x00005555563fbecd in std::panicking::begin_panic_handler () at library/std/src/panicking.rs:697
+#10 0x00005555556b5af0 in core::panicking::panic_fmt () at library/core/src/panicking.rs:75
+#11 0x00005555558339e6 in wgpu_core::storage::Storage<alloc::sync::Arc<wgpu_core::instance::Adapter, alloc::alloc::Global>>::get<alloc::sync::Arc<wgpu_core::instance::Adapter, alloc::alloc::Global>> (self=0x5555570f0008, id=...) at src/storage.rs:129
+#12 0x000055555577b8a0 in wgpu_core::registry::Registry<alloc::sync::Arc<wgpu_core::instance::Adapter, alloc::alloc::Global>>::get<alloc::sync::Arc<wgpu_core::instance::Adapter, alloc::alloc::Global>> (self=0x5555570efff8, id=...) at src/registry.rs:123
+#13 0x0000555555859589 in wgpu_core::global::Global::fetch_adapter_and_surface<wgpu_core::device::global::{impl#0}::surface_get_capabilities::{closure_env#0}, core::result::Result<wgpu_types::SurfaceCapabilities, wgpu_core::instance::GetSurfaceSupportError>> (self=0x5555570eff80, surface_id=..., adapter_id=..., get_supported_callback=...) at src/device/global.rs:76
+#14 0x00005555558594d0 in wgpu_core::global::Global::surface_get_capabilities (self=0x5555570eff80, surface_id=..., adapter_id=...) at src/device/global.rs:53
+#15 0x00005555556da8c4 in wgpu_native::wgpuSurfaceGetCapabilities (surface=0x55555720c9a0, adapter=0x5555576170f0, capabilities=...) at src/lib.rs:3903
+#16 0x00005555556bef69 in App::InitWGPU (this=0x5555569b9ee0, kWidth=640, kHeight=256) at /home/aidar/CLionProjects/CFD/CFD1/src/app/app.cpp:640
+#17 0x00005555556bee22 in App::Init (this=0x5555569b9ee0, kWidth=640, kHeight=480) at /home/aidar/CLionProjects/CFD/CFD1/src/app/app.cpp:593
+#18 0x00005555556b6cfe in init (width=640, height=480, debug=true) at /home/aidar/CLionProjects/CFD/CFD1/main.cpp:30
+#19 0x00005555556b6d8d in main (argc=1, argv=0x7fffffffe4a8) at /home/aidar/CLionProjects/CFD/CFD1/main.cpp:70
+#20 0x00007ffff7629d90 in __libc_start_call_main (main=main@entry=0x5555556b6d05 <main(int, char**)>, argc=argc@entry=1, argv=argv@entry=0x7fffffffe4a8) at ../sysdeps/nptl/libc_start_call_main.h:58
+#21 0x00007ffff7629e40 in __libc_start_main_impl (main=0x5555556b6d05 <main(int, char**)>, argc=1, argv=0x7fffffffe4a8, init=<optimized out>, fini=<optimized out>, rtld_fini=<optimized out>, stack_end=0x7fffffffe498) at ../csu/libc-start.c:392
