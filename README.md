@@ -1,4 +1,4 @@
-# Graphics editor
+# Primitive CFD
 
 ![demo.gif](resources/demo.gif)
 
