@@ -2,7 +2,7 @@
 
 # Demo
 
-https://listnt.github.io/snake3D/build/CFD1.html
+https://listnt.github.io/primitiveCFD/build/CFD1.html
 
 ![demo.gif](resources/demo.gif)
 
