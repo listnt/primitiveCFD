@@ -16,11 +16,8 @@ void Draw() {
         if (event.type == SDL_QUIT) {
             exit(1);
         }
-        // ImGui_ImplSDL2_ProcessEvent(&event);
     }
 
-    // app->PickingPhase();
-    //
     app->RenderPhase();
 }
 
@@ -32,17 +29,18 @@ extern "C" {
 int init(const int width, const int height, bool debug) {
     app->Init(width,height);
 
-    // emscripten_set_mousedown_callback("#canvas", nullptr, 0,
-    //                                   [](int k,const EmscriptenMouseEvent *e,void * u) -> EM_BOOL{
-    //                                   return app->mouseControlDown(k,e,u);
-    //                                   });
-    // emscripten_set_mouseup_callback("#canvas", nullptr, 0, [](int k,const EmscriptenMouseEvent *e,void * u) -> EM_BOOL{
-    //                                 return app->mouseControlUp(k,e,u);
-    //                                 });
-    // emscripten_set_mousemove_callback("#canvas", nullptr, 0,
-    //                                   [](int k,const EmscriptenMouseEvent *e,void * u) -> EM_BOOL{
-    //                                   return app->mouseControlMove(k,e,u);
-    //                                   });
+#ifdef EMSCRIPTEN
+    emscripten_set_mousedown_callback("#canvas", nullptr, 0,
+                                      [](int k,const EmscriptenMouseEvent *e,void * u) -> EM_BOOL{
+                                      return app->mouseControlDown(k,e,u);
+                                      });
+    emscripten_set_mouseup_callback("#canvas", nullptr, 0, [](int k,const EmscriptenMouseEvent *e,void * u) -> EM_BOOL{
+                                    return app->mouseControlUp(k,e,u);
+                                    });
+    emscripten_set_mousemove_callback("#canvas", nullptr, 0,
+                                      [](int k,const EmscriptenMouseEvent *e,void * u) -> EM_BOOL{
+                                      return app->mouseControlMove(k,e,u);
+                                      });
     // emscripten_set_wheel_callback("#canvas", nullptr, 0, [](int k,const EmscriptenWheelEvent *e,void * u) -> EM_BOOL{
     //                               return app->mouseControlWheel(k,e,u);
     //                               });
@@ -51,11 +49,13 @@ int init(const int width, const int height, bool debug) {
     //                                 return app->keyboarControl(k,e,u);
     //                                 });
 
-    // emscripten_set_main_loop(Draw, 0, true);
+    emscripten_set_main_loop(Draw, 0, true);
+
+#else
     while (true) {
         Draw();
     }
-
+#endif
     return true;
 }
 

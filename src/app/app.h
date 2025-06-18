@@ -6,22 +6,18 @@
 #define APP_H
 #include <memory>
 #include <SDL2/SDL.h>
-#include "webgpu/webgpu.h"
+#include <webgpu/webgpu.h>
 
 
 #include "CFD.h"
 #include "../base/helper.h"
-
-// #include "../imgui/imgui.h"
-// #include "../imgui/imgui_impl_sdl2.h"
-// #include "../imgui/imgui_impl_opengl3.h"
-#include "sdl2webgpu.h"
-
+#include <sdl2webgpu/sdl2webgpu.h>
 #include "../base/grid.h"
-// #include "../base/instance.h"
-// #include "../base/PickingTexture.h"
-// #include "../primitives/Line.h"
-// #include "../primitives/BizierCurve.h"
+
+#ifdef EMSCRIPTEN
+#include <emscripten.h>
+#include <emscripten/html5.h>
+#endif
 
 class App {
 protected:
@@ -37,7 +33,8 @@ protected:
     WGPURenderPipeline wgpuRenderPipelineLines;
 
     WGPUBindGroup wgpuBindGroup;
-    WGPUBindGroupLayout wgpuBindGroupLayout;
+
+    std::vector<WGPUBindGroupLayout> wgpuBindGroups;
 
     WGPUTextureFormat surfaceFormat = WGPUTextureFormat_Undefined;
 
@@ -53,11 +50,12 @@ protected:
     Matrix4x4 camera;
     // int focusedObj = -1;
     // bool isCaptured = false;
-    // bool isMouseDown = false;
+    bool isMouseDown = false;
     // bool isContextOpen = false;
     // bool disablePanning = false;
     // int mouseClickedX = 0, mouseClickedY = 0;
     float left = -25, right = 25, bottom = -25, top = 25, stepx = 1, stepy = 1;;
+    int kWidth, kHeight;
     // int selectedInstrument = 0;
     // const std::vector<char *> instruments = {
     //     "pointer",
@@ -75,9 +73,9 @@ public:
     void RenderPhase() const;
 
     // bool keyboarControl(int k, const EmscriptenKeyboardEvent *e, void *u);
-    //
-    // bool mouseControlDown(int eventType, const EmscriptenMouseEvent *e, void *);
-    //
+
+    bool mouseControlDown(int eventType, const EmscriptenMouseEvent *e, void *);
+
     // void pickObject(const EmscriptenMouseEvent *e);
     //
     // void addLine(const EmscriptenMouseEvent *e);
@@ -85,11 +83,11 @@ public:
     // void addBizierCurve(const EmscriptenMouseEvent *e);
     //
     // void addPlotter(const EmscriptenMouseEvent *e);
-    //
-    // bool mouseControlUp(int eventType, const EmscriptenMouseEvent *e, void *);
-    //
-    // bool mouseControlMove(int eventType, const EmscriptenMouseEvent *e, void *);
-    //
+
+    bool mouseControlUp(int eventType, const EmscriptenMouseEvent *e, void *);
+
+    bool mouseControlMove(int eventType, const EmscriptenMouseEvent *e, void *);
+
     // bool mouseControlWheel(int eventType, const EmscriptenWheelEvent *e, void *);
     //
     // void AddRandomBizierCurve();

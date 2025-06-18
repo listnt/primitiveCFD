@@ -4,7 +4,7 @@
 
 #include "helper.h"
 
-#include "webgpu/wgpu.h"
+#include <webgpu/webgpu.h>
 
 
 WGPUShaderModule createShader(WGPUDevice device, const char *label, const char *filepath) {
@@ -20,7 +20,7 @@ WGPUShaderModule createShader(WGPUDevice device, const char *label, const char *
     fread(code, size, 1, file);
 
     code[size] = '\0';
-
+#ifndef EMSCRIPTEN
     WGPUShaderSourceWGSL wgsl = {};
     wgsl.chain = {.sType = WGPUSType_ShaderSourceWGSL};
     wgsl.code = {code,WGPU_STRLEN};
@@ -29,6 +29,18 @@ WGPUShaderModule createShader(WGPUDevice device, const char *label, const char *
     desc.nextInChain = (WGPUChainedStruct *) &wgsl;
     desc.label = {label,WGPU_STRLEN};
     auto shaderModule = wgpuDeviceCreateShaderModule(device, &desc);
+#else
+    WGPUShaderModuleWGSLDescriptor wgslDesc = {};
+    wgslDesc.chain.sType = WGPUSType_ShaderModuleWGSLDescriptor; // Specify WGSL descriptor type
+    wgslDesc.code = code; // Shader source as a null-terminated string (const char*)
+
+    WGPUShaderModuleDescriptor desc={};
+    desc.nextInChain = (WGPUChainedStruct*)&wgslDesc;
+    desc.label = label;
+
+    auto shaderModule = wgpuDeviceCreateShaderModule(device,&desc);
+#endif
+
 
     if (file) {
         fclose(file);

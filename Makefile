@@ -57,10 +57,10 @@ RM = /usr/bin/cmake -E rm -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /home/aidar/CLionProjects/BizierEditor
+CMAKE_SOURCE_DIR = /home/aidar/CLionProjects/CFD/CFD1
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /home/aidar/CLionProjects/BizierEditor
+CMAKE_BINARY_DIR = /home/aidar/CLionProjects/CFD/CFD1
 
 #=============================================================================
 # Targets provided globally by CMake.
@@ -87,9 +87,9 @@ rebuild_cache/fast: rebuild_cache
 
 # The main all target
 all: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/aidar/CLionProjects/BizierEditor/CMakeFiles /home/aidar/CLionProjects/BizierEditor//CMakeFiles/progress.marks
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/aidar/CLionProjects/CFD/CFD1/CMakeFiles /home/aidar/CLionProjects/CFD/CFD1//CMakeFiles/progress.marks
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 all
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/aidar/CLionProjects/BizierEditor/CMakeFiles 0
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/aidar/CLionProjects/CFD/CFD1/CMakeFiles 0
 .PHONY : all
 
 # The main clean target
@@ -117,17 +117,17 @@ depend:
 .PHONY : depend
 
 #=============================================================================
-# Target rules for targets named BizierEditor
+# Target rules for targets named CFD1
 
 # Build rule for target.
-BizierEditor: cmake_check_build_system
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 BizierEditor
-.PHONY : BizierEditor
+CFD1: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CFD1
+.PHONY : CFD1
 
 # fast build rule for target.
-BizierEditor/fast:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/BizierEditor.dir/build.make CMakeFiles/BizierEditor.dir/build
-.PHONY : BizierEditor/fast
+CFD1/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/CFD1.dir/build.make CMakeFiles/CFD1.dir/build
+.PHONY : CFD1/fast
 
 #=============================================================================
 # Target rules for targets named imgui
@@ -139,15 +139,28 @@ imgui: cmake_check_build_system
 
 # fast build rule for target.
 imgui/fast:
-	$(MAKE) $(MAKESILENT) -f imgui/CMakeFiles/imgui.dir/build.make imgui/CMakeFiles/imgui.dir/build
+	$(MAKE) $(MAKESILENT) -f third_party/imgui/CMakeFiles/imgui.dir/build.make third_party/imgui/CMakeFiles/imgui.dir/build
 .PHONY : imgui/fast
+
+#=============================================================================
+# Target rules for targets named sdl2webgpu
+
+# Build rule for target.
+sdl2webgpu: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 sdl2webgpu
+.PHONY : sdl2webgpu
+
+# fast build rule for target.
+sdl2webgpu/fast:
+	$(MAKE) $(MAKESILENT) -f third_party/sdl2webgpu/CMakeFiles/sdl2webgpu.dir/build.make third_party/sdl2webgpu/CMakeFiles/sdl2webgpu.dir/build
+.PHONY : sdl2webgpu/fast
 
 main.o: main.cpp.o
 .PHONY : main.o
 
 # target to build an object file
 main.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/BizierEditor.dir/build.make CMakeFiles/BizierEditor.dir/main.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/CFD1.dir/build.make CMakeFiles/CFD1.dir/main.cpp.o
 .PHONY : main.cpp.o
 
 main.i: main.cpp.i
@@ -155,7 +168,7 @@ main.i: main.cpp.i
 
 # target to preprocess a source file
 main.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/BizierEditor.dir/build.make CMakeFiles/BizierEditor.dir/main.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/CFD1.dir/build.make CMakeFiles/CFD1.dir/main.cpp.i
 .PHONY : main.cpp.i
 
 main.s: main.cpp.s
@@ -163,15 +176,39 @@ main.s: main.cpp.s
 
 # target to generate assembly for a file
 main.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/BizierEditor.dir/build.make CMakeFiles/BizierEditor.dir/main.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/CFD1.dir/build.make CMakeFiles/CFD1.dir/main.cpp.s
 .PHONY : main.cpp.s
+
+src/app/CFD.o: src/app/CFD.cpp.o
+.PHONY : src/app/CFD.o
+
+# target to build an object file
+src/app/CFD.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/CFD1.dir/build.make CMakeFiles/CFD1.dir/src/app/CFD.cpp.o
+.PHONY : src/app/CFD.cpp.o
+
+src/app/CFD.i: src/app/CFD.cpp.i
+.PHONY : src/app/CFD.i
+
+# target to preprocess a source file
+src/app/CFD.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/CFD1.dir/build.make CMakeFiles/CFD1.dir/src/app/CFD.cpp.i
+.PHONY : src/app/CFD.cpp.i
+
+src/app/CFD.s: src/app/CFD.cpp.s
+.PHONY : src/app/CFD.s
+
+# target to generate assembly for a file
+src/app/CFD.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/CFD1.dir/build.make CMakeFiles/CFD1.dir/src/app/CFD.cpp.s
+.PHONY : src/app/CFD.cpp.s
 
 src/app/app.o: src/app/app.cpp.o
 .PHONY : src/app/app.o
 
 # target to build an object file
 src/app/app.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/BizierEditor.dir/build.make CMakeFiles/BizierEditor.dir/src/app/app.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/CFD1.dir/build.make CMakeFiles/CFD1.dir/src/app/app.cpp.o
 .PHONY : src/app/app.cpp.o
 
 src/app/app.i: src/app/app.cpp.i
@@ -179,7 +216,7 @@ src/app/app.i: src/app/app.cpp.i
 
 # target to preprocess a source file
 src/app/app.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/BizierEditor.dir/build.make CMakeFiles/BizierEditor.dir/src/app/app.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/CFD1.dir/build.make CMakeFiles/CFD1.dir/src/app/app.cpp.i
 .PHONY : src/app/app.cpp.i
 
 src/app/app.s: src/app/app.cpp.s
@@ -187,39 +224,15 @@ src/app/app.s: src/app/app.cpp.s
 
 # target to generate assembly for a file
 src/app/app.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/BizierEditor.dir/build.make CMakeFiles/BizierEditor.dir/src/app/app.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/CFD1.dir/build.make CMakeFiles/CFD1.dir/src/app/app.cpp.s
 .PHONY : src/app/app.cpp.s
-
-src/base/PickingTexture.o: src/base/PickingTexture.cpp.o
-.PHONY : src/base/PickingTexture.o
-
-# target to build an object file
-src/base/PickingTexture.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/BizierEditor.dir/build.make CMakeFiles/BizierEditor.dir/src/base/PickingTexture.cpp.o
-.PHONY : src/base/PickingTexture.cpp.o
-
-src/base/PickingTexture.i: src/base/PickingTexture.cpp.i
-.PHONY : src/base/PickingTexture.i
-
-# target to preprocess a source file
-src/base/PickingTexture.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/BizierEditor.dir/build.make CMakeFiles/BizierEditor.dir/src/base/PickingTexture.cpp.i
-.PHONY : src/base/PickingTexture.cpp.i
-
-src/base/PickingTexture.s: src/base/PickingTexture.cpp.s
-.PHONY : src/base/PickingTexture.s
-
-# target to generate assembly for a file
-src/base/PickingTexture.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/BizierEditor.dir/build.make CMakeFiles/BizierEditor.dir/src/base/PickingTexture.cpp.s
-.PHONY : src/base/PickingTexture.cpp.s
 
 src/base/base.o: src/base/base.cpp.o
 .PHONY : src/base/base.o
 
 # target to build an object file
 src/base/base.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/BizierEditor.dir/build.make CMakeFiles/BizierEditor.dir/src/base/base.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/CFD1.dir/build.make CMakeFiles/CFD1.dir/src/base/base.cpp.o
 .PHONY : src/base/base.cpp.o
 
 src/base/base.i: src/base/base.cpp.i
@@ -227,7 +240,7 @@ src/base/base.i: src/base/base.cpp.i
 
 # target to preprocess a source file
 src/base/base.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/BizierEditor.dir/build.make CMakeFiles/BizierEditor.dir/src/base/base.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/CFD1.dir/build.make CMakeFiles/CFD1.dir/src/base/base.cpp.i
 .PHONY : src/base/base.cpp.i
 
 src/base/base.s: src/base/base.cpp.s
@@ -235,7 +248,7 @@ src/base/base.s: src/base/base.cpp.s
 
 # target to generate assembly for a file
 src/base/base.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/BizierEditor.dir/build.make CMakeFiles/BizierEditor.dir/src/base/base.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/CFD1.dir/build.make CMakeFiles/CFD1.dir/src/base/base.cpp.s
 .PHONY : src/base/base.cpp.s
 
 src/base/grid.o: src/base/grid.cpp.o
@@ -243,7 +256,7 @@ src/base/grid.o: src/base/grid.cpp.o
 
 # target to build an object file
 src/base/grid.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/BizierEditor.dir/build.make CMakeFiles/BizierEditor.dir/src/base/grid.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/CFD1.dir/build.make CMakeFiles/CFD1.dir/src/base/grid.cpp.o
 .PHONY : src/base/grid.cpp.o
 
 src/base/grid.i: src/base/grid.cpp.i
@@ -251,7 +264,7 @@ src/base/grid.i: src/base/grid.cpp.i
 
 # target to preprocess a source file
 src/base/grid.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/BizierEditor.dir/build.make CMakeFiles/BizierEditor.dir/src/base/grid.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/CFD1.dir/build.make CMakeFiles/CFD1.dir/src/base/grid.cpp.i
 .PHONY : src/base/grid.cpp.i
 
 src/base/grid.s: src/base/grid.cpp.s
@@ -259,15 +272,39 @@ src/base/grid.s: src/base/grid.cpp.s
 
 # target to generate assembly for a file
 src/base/grid.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/BizierEditor.dir/build.make CMakeFiles/BizierEditor.dir/src/base/grid.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/CFD1.dir/build.make CMakeFiles/CFD1.dir/src/base/grid.cpp.s
 .PHONY : src/base/grid.cpp.s
+
+src/base/helper.o: src/base/helper.cpp.o
+.PHONY : src/base/helper.o
+
+# target to build an object file
+src/base/helper.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/CFD1.dir/build.make CMakeFiles/CFD1.dir/src/base/helper.cpp.o
+.PHONY : src/base/helper.cpp.o
+
+src/base/helper.i: src/base/helper.cpp.i
+.PHONY : src/base/helper.i
+
+# target to preprocess a source file
+src/base/helper.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/CFD1.dir/build.make CMakeFiles/CFD1.dir/src/base/helper.cpp.i
+.PHONY : src/base/helper.cpp.i
+
+src/base/helper.s: src/base/helper.cpp.s
+.PHONY : src/base/helper.s
+
+# target to generate assembly for a file
+src/base/helper.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/CFD1.dir/build.make CMakeFiles/CFD1.dir/src/base/helper.cpp.s
+.PHONY : src/base/helper.cpp.s
 
 src/base/instance.o: src/base/instance.cpp.o
 .PHONY : src/base/instance.o
 
 # target to build an object file
 src/base/instance.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/BizierEditor.dir/build.make CMakeFiles/BizierEditor.dir/src/base/instance.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/CFD1.dir/build.make CMakeFiles/CFD1.dir/src/base/instance.cpp.o
 .PHONY : src/base/instance.cpp.o
 
 src/base/instance.i: src/base/instance.cpp.i
@@ -275,7 +312,7 @@ src/base/instance.i: src/base/instance.cpp.i
 
 # target to preprocess a source file
 src/base/instance.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/BizierEditor.dir/build.make CMakeFiles/BizierEditor.dir/src/base/instance.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/CFD1.dir/build.make CMakeFiles/CFD1.dir/src/base/instance.cpp.i
 .PHONY : src/base/instance.cpp.i
 
 src/base/instance.s: src/base/instance.cpp.s
@@ -283,56 +320,8 @@ src/base/instance.s: src/base/instance.cpp.s
 
 # target to generate assembly for a file
 src/base/instance.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/BizierEditor.dir/build.make CMakeFiles/BizierEditor.dir/src/base/instance.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/CFD1.dir/build.make CMakeFiles/CFD1.dir/src/base/instance.cpp.s
 .PHONY : src/base/instance.cpp.s
-
-src/primitives/BizierCurve.o: src/primitives/BizierCurve.cpp.o
-.PHONY : src/primitives/BizierCurve.o
-
-# target to build an object file
-src/primitives/BizierCurve.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/BizierEditor.dir/build.make CMakeFiles/BizierEditor.dir/src/primitives/BizierCurve.cpp.o
-.PHONY : src/primitives/BizierCurve.cpp.o
-
-src/primitives/BizierCurve.i: src/primitives/BizierCurve.cpp.i
-.PHONY : src/primitives/BizierCurve.i
-
-# target to preprocess a source file
-src/primitives/BizierCurve.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/BizierEditor.dir/build.make CMakeFiles/BizierEditor.dir/src/primitives/BizierCurve.cpp.i
-.PHONY : src/primitives/BizierCurve.cpp.i
-
-src/primitives/BizierCurve.s: src/primitives/BizierCurve.cpp.s
-.PHONY : src/primitives/BizierCurve.s
-
-# target to generate assembly for a file
-src/primitives/BizierCurve.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/BizierEditor.dir/build.make CMakeFiles/BizierEditor.dir/src/primitives/BizierCurve.cpp.s
-.PHONY : src/primitives/BizierCurve.cpp.s
-
-src/primitives/Line.o: src/primitives/Line.cpp.o
-.PHONY : src/primitives/Line.o
-
-# target to build an object file
-src/primitives/Line.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/BizierEditor.dir/build.make CMakeFiles/BizierEditor.dir/src/primitives/Line.cpp.o
-.PHONY : src/primitives/Line.cpp.o
-
-src/primitives/Line.i: src/primitives/Line.cpp.i
-.PHONY : src/primitives/Line.i
-
-# target to preprocess a source file
-src/primitives/Line.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/BizierEditor.dir/build.make CMakeFiles/BizierEditor.dir/src/primitives/Line.cpp.i
-.PHONY : src/primitives/Line.cpp.i
-
-src/primitives/Line.s: src/primitives/Line.cpp.s
-.PHONY : src/primitives/Line.s
-
-# target to generate assembly for a file
-src/primitives/Line.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/BizierEditor.dir/build.make CMakeFiles/BizierEditor.dir/src/primitives/Line.cpp.s
-.PHONY : src/primitives/Line.cpp.s
 
 # Help Target
 help:
@@ -342,32 +331,30 @@ help:
 	@echo "... depend"
 	@echo "... edit_cache"
 	@echo "... rebuild_cache"
-	@echo "... BizierEditor"
+	@echo "... CFD1"
 	@echo "... imgui"
+	@echo "... sdl2webgpu"
 	@echo "... main.o"
 	@echo "... main.i"
 	@echo "... main.s"
+	@echo "... src/app/CFD.o"
+	@echo "... src/app/CFD.i"
+	@echo "... src/app/CFD.s"
 	@echo "... src/app/app.o"
 	@echo "... src/app/app.i"
 	@echo "... src/app/app.s"
-	@echo "... src/base/PickingTexture.o"
-	@echo "... src/base/PickingTexture.i"
-	@echo "... src/base/PickingTexture.s"
 	@echo "... src/base/base.o"
 	@echo "... src/base/base.i"
 	@echo "... src/base/base.s"
 	@echo "... src/base/grid.o"
 	@echo "... src/base/grid.i"
 	@echo "... src/base/grid.s"
+	@echo "... src/base/helper.o"
+	@echo "... src/base/helper.i"
+	@echo "... src/base/helper.s"
 	@echo "... src/base/instance.o"
 	@echo "... src/base/instance.i"
 	@echo "... src/base/instance.s"
-	@echo "... src/primitives/BizierCurve.o"
-	@echo "... src/primitives/BizierCurve.i"
-	@echo "... src/primitives/BizierCurve.s"
-	@echo "... src/primitives/Line.o"
-	@echo "... src/primitives/Line.i"
-	@echo "... src/primitives/Line.s"
 .PHONY : help
 
 

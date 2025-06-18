@@ -1,0 +1,377 @@
+@group(0) @binding(0) var velocities : texture_2d<f32>;
+@group(0) @binding(0) var minMaxCurlP: texture_2d<f32>; // should be 1x1 pixel containing minCurl,maxCurl,minP,maxP
+
+@fragment
+fn fs_main(@location(0) vCol : vec4<f32>) -> @location(0) vec4<f32> {
+
+    return vCol;
+}@group(1) @binding(0) var objTexture : texture_2d<u32>;
+
+@fragment
+fn fs_main(@location(0) vCol : vec4<f32>,@location(1) uv: vec2<f32>) -> @location(0) vec4<f32> {
+    let texelCoords = vec2i(uv * vec2f(textureDimensions(objTexture)));
+    // And we fetch a texel from the texture
+    let color:vec4<f32> = vec4<f32>(textureLoad(objTexture, texelCoords, 0).rgba)/255.0;
+
+    return color;
+}#version 300 es
+precision mediump float;
+
+in vec4 color;
+
+out vec4 fragColor;
+
+void main(){
+    fragColor = color;
+}
+#version 300 es
+precision mediump float;
+
+// Input vertex data, different for all executions of this shader.
+layout (location = 0) in vec2 vPosition;
+layout (location = 3) in vec4 aColor;
+layout (location = 2) in float zIndex;
+
+// Values that stay constant for the whole mesh.
+uniform mat4 viewModel;
+uniform mat4 projection;
+
+out vec4 color;
+
+void main(){
+    color = aColor;
+    // Output position of the vertex, in clip space : MVP * position
+    gl_Position = projection * viewModel * vec4(vPosition.xy, zIndex, 1.0);
+    gl_PointSize=10.0;
+}
+struct Uniforms {
+    step: f32,
+    dt: f32,
+    rho: f32,
+    kinematicViscosity: f32,
+    velocityIntake: f32
+}
+
+@group(0) @binding(0) var inputVelocity: texture_2d<f32>;
+@group(0) @binding(1) var stencilMask: texture_2d<u32>;
+@group(0) @binding(2) var outputVelocity: texture_storage_2d<rg32float,write>;
+@group(0) @binding(3) var<uniform> cfd:Uniforms;
+
+@compute @workgroup_size(16,16)
+fn computeNewVelocities(@builtin(global_invocation_id) id: vec3<u32>){
+    let mask = textureLoad(stencilMask,vec2<u32>(id.x,id.y), 0);
+
+    let e = textureLoad(inputVelocity,vec2<u32>(id.x + 1,id.y), 0);
+    let w = textureLoad(inputVelocity,vec2<u32>(id.x - 1,id.y), 0);
+    let n = textureLoad(inputVelocity,vec2<u32>(id.x,id.y + 1), 0);
+    let s = textureLoad(inputVelocity,vec2<u32>(id.x,id.y - 1), 0);
+
+    let v = textureLoad(inputVelocity,vec2<u32>(id.x,id.y),0);
+
+    if (mask.r == 1){
+        textureStore(outputVelocity,vec2<u32>(id.x,id.y), vec4<f32>(cfd.velocityIntake,0,0,0));
+    }else if (mask.r ==0){ // if wall
+        textureStore(outputVelocity,vec2<u32>(id.x,id.y), vec4<f32>(0,0,0,0));
+    }else if (mask.r == 2){ // if outlet
+        let r = textureLoad(stencilMask,vec2<u32>(id.x + 1,id.y), 0);
+        let l = textureLoad(stencilMask,vec2<u32>(id.x - 1,id.y), 0);
+        let t = textureLoad(stencilMask,vec2<u32>(id.x,id.y + 1), 0);
+        let b = textureLoad(stencilMask,vec2<u32>(id.x,id.y - 1), 0);
+
+        if (l.x==255){
+            textureStore(outputVelocity,vec2<u32>(id.x,id.y), w);
+        }else if(r.x==255){
+            textureStore(outputVelocity,vec2<u32>(id.x,id.y), e);
+        }else if(t.x==255){
+            textureStore(outputVelocity,vec2<u32>(id.x,id.y), n);
+        }else if(b.x==255){
+            textureStore(outputVelocity,vec2<u32>(id.x,id.y), s);
+        }else{
+            textureStore(outputVelocity,vec2<u32>(id.x,id.y), vec4<f32>(0,0,0,0));
+        }
+    }else{
+        let fx = upwind(v.x);
+        let fy = upwind(v.y);
+
+        let ve1 = v.x * fx.x + e.x * fx.y;
+        let vw1 = w.x * fx.x + v.x * fx.y;
+        let vn1 = v.x * fy.x + n.x * fy.y;
+        let vs1 = s.x * fy.x + v.x * fy.y;
+
+       let a1 = v.x * cfd.dt/cfd.step * (ve1 - vw1);
+       let a2 = v.y * cfd.dt/cfd.step * (vn1 - vs1);
+       let a3 = cfd.kinematicViscosity * (
+                                         cfd.dt / (cfd.step * cfd.step) * (e.x - 2 * v.x + w.x) +
+                                         cfd.dt / (cfd.step * cfd.step) * (n.x - 2 * v.x + s.x)
+                                     );
+       let a4 = v.x - a1 - a2 + a3;
+
+          let ve2 = v.y * fx.x + e.y * fx.y;
+          let vw2 = w.y * fx.x + v.y * fx.y;
+          let vn2 = v.y * fy.x + n.y * fy.y;
+          let vs2 = s.y * fy.x + v.y * fy.y;
+
+       let b1 = v.x * cfd.dt/cfd.step * (ve2 - vw2);
+       let b2 = v.y * cfd.dt/cfd.step * (vn2 - vs2);
+       let b3 = cfd.kinematicViscosity * (
+                                         cfd.dt / (cfd.step * cfd.step) * (e.y - 2 * v.y + w.y) +
+                                         cfd.dt / (cfd.step * cfd.step) * (n.y - 2 * v.y + s.y)
+                                     );
+       let b4 = v.y - b1 - b2 + b3;
+       textureStore(outputVelocity,vec2<u32>(id.x,id.y),vec4<f32>(a4,b4,0,0));
+    }
+}
+
+fn upwind(c: f32) -> vec2<f32>{
+    return vec2<f32>(max(c / (abs(c) + 1e-6), 0.0), max(-c / (abs(c) + 1e-6), 0.0));
+}struct Uniforms {
+    step: f32,
+    dt: f32,
+    rho: f32,
+    kinematicViscosity: f32,
+    velocityIntake: f32
+}
+
+@group(0) @binding(0) var inputPressure: texture_2d<f32>;
+@group(0) @binding(1) var inputVelocity: texture_2d<f32>;
+@group(0) @binding(2) var stencilMask: texture_2d<u32>;
+@group(0) @binding(3) var outputPressure: texture_storage_2d<r32float,write>;
+@group(0) @binding(4) var<uniform> cfd:Uniforms;
+
+@compute @workgroup_size(16,16)
+fn computeNewPressure(@builtin(global_invocation_id) id: vec3<u32>){
+    let mask = textureLoad(stencilMask,vec2<u32>(id.x,id.y), 0);
+
+    var e = textureLoad(inputPressure,vec2<u32>(id.x + 1,id.y), 0);
+    var w = textureLoad(inputPressure,vec2<u32>(id.x - 1,id.y), 0);
+    var n = textureLoad(inputPressure,vec2<u32>(id.x,id.y + 1), 0);
+    var s = textureLoad(inputPressure,vec2<u32>(id.x,id.y - 1), 0);
+
+    let minV = vec4<f32>(-10.0,-10.0,-10.0,-10.0);
+    let maxV = vec4<f32>(10.0,10.0,10.0,10.0);
+
+    e = clamp(e,minV, maxV);
+    w = clamp(w,minV, maxV);
+    n = clamp(n,minV, maxV);
+    s = clamp(s,minV, maxV);
+
+    let p = textureLoad(inputPressure,vec2<u32>(id.x,id.y),0);
+
+    if (mask.r==0 || mask.r == 1){ // Neuman condition if inlet or wall
+        let r = textureLoad(stencilMask,vec2<u32>(id.x + 1,id.y), 0);
+        let l = textureLoad(stencilMask,vec2<u32>(id.x - 1,id.y), 0);
+        let t = textureLoad(stencilMask,vec2<u32>(id.x,id.y + 1), 0);
+        let b = textureLoad(stencilMask,vec2<u32>(id.x,id.y - 1), 0);
+
+        if (l.x==255){
+            textureStore(outputPressure,vec2<u32>(id.x,id.y), w);
+        }else if(r.x==255){
+            textureStore(outputPressure,vec2<u32>(id.x,id.y), e);
+        }else if(t.x==255){
+            textureStore(outputPressure,vec2<u32>(id.x,id.y), n);
+        }else if(b.x==255){
+            textureStore(outputPressure,vec2<u32>(id.x,id.y), s);
+        }else{
+            textureStore(outputPressure,vec2<u32>(id.x,id.y), vec4<f32>(0,0,0,0));
+        }
+    } else if (mask.r == 2){ // if outlet
+        textureStore(outputPressure,vec2<u32>(id.x,id.y), vec4<f32>(0,0,0,0));
+    }else {
+        let ve = textureLoad(inputVelocity,vec2<u32>(id.x + 1,id.y), 0);
+        let vw = textureLoad(inputVelocity,vec2<u32>(id.x - 1,id.y), 0);
+        let vn = textureLoad(inputVelocity,vec2<u32>(id.x,id.y + 1), 0);
+        let vs = textureLoad(inputVelocity,vec2<u32>(id.x,id.y - 1), 0);
+        let res = ((n.x + s.x) * cfd.step * cfd.step +
+                            (e.x + w.x) * cfd.step * cfd.step) / (4 * cfd.step * cfd.step) -
+                           (cfd.step * cfd.step * cfd.step * cfd.step) / (4 * cfd.step * cfd.step) * cfd.rho * 1.0 / cfd.dt *
+                           (
+                               (ve.x - vw.x) / (2.0 * cfd.step) +
+                               (vn.y - vs.y) / (2.0 * cfd.step)
+                           );
+
+          textureStore(outputPressure,vec2<u32>(id.x,id.y),vec4<f32>(res,0,0,0));
+    }
+}struct Uniforms {
+    step: f32,
+    dt: f32,
+    rho: f32,
+    kinematicViscosity: f32,
+    velocityIntake: f32
+}
+
+@group(0) @binding(0) var inputPressure: texture_2d<f32>;
+@group(0) @binding(1) var inputVelocity: texture_2d<f32>;
+@group(0) @binding(2) var stencilMask: texture_2d<u32>;
+@group(0) @binding(3) var outputVelocity: texture_storage_2d<rg32float,write>;
+@group(0) @binding(4) var<uniform> cfd:Uniforms;
+
+@compute @workgroup_size(16,16)
+fn computeFinalVelocites(@builtin(global_invocation_id) id: vec3<u32>){
+    let mask = textureLoad(stencilMask,vec2<u32>(id.x,id.y), 0);
+
+    let e = textureLoad(inputPressure,vec2<u32>(id.x + 1,id.y), 0);
+    let w = textureLoad(inputPressure,vec2<u32>(id.x - 1,id.y), 0);
+    let n = textureLoad(inputPressure,vec2<u32>(id.x,id.y + 1), 0);
+    let s = textureLoad(inputPressure,vec2<u32>(id.x,id.y - 1), 0);
+
+    let v = textureLoad(inputVelocity,vec2<u32>(id.x,id.y),0);
+
+    if (mask.r == 1){
+        textureStore(outputVelocity,vec2<u32>(id.x,id.y), vec4<f32>(cfd.velocityIntake,0,0,0));
+    }else if (mask.r ==0){ // if wall
+        textureStore(outputVelocity,vec2<u32>(id.x,id.y), vec4<f32>(0,0,0,0));
+    }else if (mask.r == 2){ // if outlet
+        let r = textureLoad(stencilMask,vec2<u32>(id.x + 1,id.y), 0);
+        let l = textureLoad(stencilMask,vec2<u32>(id.x - 1,id.y), 0);
+        let t = textureLoad(stencilMask,vec2<u32>(id.x,id.y + 1), 0);
+        let b = textureLoad(stencilMask,vec2<u32>(id.x,id.y - 1), 0);
+
+        if (l.x==255){
+            textureStore(outputVelocity,vec2<u32>(id.x,id.y), w);
+        }else if(r.x==255){
+            textureStore(outputVelocity,vec2<u32>(id.x,id.y), e);
+        }else if(t.x==255){
+            textureStore(outputVelocity,vec2<u32>(id.x,id.y), n);
+        }else if(b.x==255){
+            textureStore(outputVelocity,vec2<u32>(id.x,id.y), s);
+        }else{
+            textureStore(outputVelocity,vec2<u32>(id.x,id.y), vec4<f32>(0,0,0,0));
+        }
+    }else {
+        let res =  vec2<f32>(
+            v.x - (cfd.dt / cfd.rho * (e.x - w.x) / (2 * cfd.step)),
+            v.y - (cfd.dt / cfd.rho * (n.x - s.x) / (2 * cfd.step))
+        );
+
+        textureStore(outputVelocity,vec2<u32>(id.x,id.y),vec4<f32>(res.x,res.y,0,0));
+    }
+}@group(0) @binding(0) var velocity: texture_2d<f32>;
+@group(0) @binding(1) var pressure: texture_2d<f32>;
+@group(0) @binding(2) var minMaxCurlP:texture_storage_2d<rgba32float,write>;
+
+@compute @workgroup_size(16,16)
+fn computeCurlP(@builtin(global_invocation_id) id: vec3<u32>){
+    let offset = vec2<u32>(0, 1);
+
+    let vn = textureLoad(velocity,id.xy + offset.xy,0);
+    let vs = textureLoad(velocity,id.xy - offset.xy,0);
+    let ve = textureLoad(velocity,id.xy + offset.yx,0);
+    let vw = textureLoad(velocity,id.xy - offset.yx,0);
+
+    let p = textureLoad(pressure,id.xy,0);
+    let curl = (vn.x - vs.x) - (ve.y - vw.y);
+
+    textureStore(minMaxCurlP,id.xy,vec4<f32>(curl,curl,p.x,p.x));
+}@group(0) @binding(0) var input: texture_2d<f32>;
+@group(0) @binding(1) var output:texture_storage_2d<rgba32float,write>;
+
+@compute @workgroup_size(16,16)
+fn computeMinMax(@builtin(global_invocation_id) id: vec3<u32>){
+    let offset = vec2<u32>(0, 1);
+
+    let v0 = textureLoad(input,2 * id.xy + offset.xx,0);
+    let vn = textureLoad(input,2 * id.xy + offset.xy,0);
+    let ve = textureLoad(input,2 * id.xy + offset.yx,0);
+    let vne = textureLoad(input,2 * id.xy + offset.yy,0);
+
+    let minCurl = min(min(v0.x,ve.x), min(vn.x,vne.x));
+    let maxCurl = max(max(v0.y,ve.y), max(vn.y,vne.y));
+
+    let minP = min(min(v0.z,ve.z), min(vn.z,vne.z));
+    let maxP = max(max(v0.a,ve.a), max(vn.a,vne.a));
+
+    textureStore(output,id.xy,vec4<f32>(minCurl,maxCurl,minP,maxP));
+}@group(0) @binding(0) var input: texture_2d<f32>;
+@group(0) @binding(1) var minMaxCurlP: texture_2d<f32>;
+@group(0) @binding(2) var stencilMask: texture_2d<u32>;
+@group(0) @binding(3) var output:texture_storage_2d<rgba8uint,write>;
+
+@compute @workgroup_size(16,16)
+fn computeFinalColor(@builtin(global_invocation_id) id: vec3<u32>){
+    let mask = textureLoad(stencilMask,vec2<u32>(id.x,id.y), 0);
+    if (mask.r == 0){
+        textureStore(output,id.xy,vec4<u32>(0,0,0,255));
+        return;
+    }else if (mask.r == 1){
+         textureStore(output,id.xy,vec4<u32>(0,255,255,255));
+         return;
+    }else if (mask.r == 2){
+          textureStore(output,id.xy,vec4<u32>(255,0,255,255));
+          return;
+    }
+
+    let minMax = textureLoad(minMaxCurlP,vec2<u32>(0,0),0);
+
+    let minV = minMax.x;
+    let maxV = minMax.y;
+
+    let curl = textureLoad(input,id.xy,0).x;
+
+    var t : f32 = (curl - minV) / (maxV - minV);
+
+    var startR : f32 = 1.0;
+    var startG : f32 = 1.0;
+    var startB : f32 = 1.0;
+
+    var endR : f32 = 0.0;
+    var endG : f32 = 0.0;
+    var endB : f32 = 1.0;
+
+    if (t <= (-minV) / (maxV - minV)) {
+        t /= (-minV) / (maxV - minV);
+
+        t *= t; // slower at start
+
+        startR = 1.0;
+        startG = 0.0;
+        startB = 0.0;
+
+        endR = 1.0;
+        endG = 1.0;
+        endB = 1.0;
+    } else {
+        t -= (-minV) / (maxV - minV);
+        t /= (-minV) / (maxV - minV);
+
+        t = (3.0 * t * t) - (2.0 * t * t * t);
+    }
+
+
+    let cR : u32 = u32((startR + t * (endR - startR)) * 255.0);
+    let cG : u32 = u32((startG + t * (endG - startG)) * 255.0);
+    let cB : u32 = u32((startB + t * (endB - startB)) * 255.0);
+
+    textureStore(output,id.xy,vec4<u32>(cR,cG,cB,255));
+}struct VertexIn {
+    @location(0) aPos : vec2<f32>,
+    @location(1) aCol : vec4<f32>,
+    @location(2) zIndex : f32,
+    @location(3) uv : vec2<f32>,
+    @location(4) model_1 :vec4<f32>,
+    @location(5) model_2 :vec4<f32>,
+    @location(6) model_3 :vec4<f32>,
+    @location(7) model_4 :vec4<f32>
+}
+
+struct VertexOut {
+    @location(0) vCol : vec4<f32>,
+    @location(1) uv : vec2<f32>,
+    @builtin(position) Position : vec4<f32>
+}
+struct Uniforms {
+    projection: mat4x4<f32>,
+    view: mat4x4<f32>,
+}
+@group(0) @binding(0) var<uniform> pvm: Uniforms;
+
+@vertex
+fn vs_main(in : VertexIn) -> VertexOut {
+    var model : mat4x4<f32>;
+    model = transpose( mat4x4<f32>(in.model_1, in.model_2, in.model_3, in.model_4));
+
+    var output : VertexOut;
+    output.Position = vec4<f32>(pvm.projection * pvm.view * model * vec4<f32>(in.aPos, in.zIndex, 1.0));
+    output.vCol = in.aCol;
+    output.uv = in.uv;
+    return output;
+}

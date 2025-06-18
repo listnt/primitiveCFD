@@ -12,6 +12,7 @@
 #include <vector>
 
 #include "base.h"
+#include <webgpu/webgpu.h>
 
 
 class model {
@@ -20,17 +21,19 @@ protected:
     std::vector<float> zIndex;
     std::vector<Vector4f> pickingColor;
     std::vector<Vector4f> colors;
+    std::vector<Vector2f> uv;
 
 public:
-    model(const std::vector<Vector2f> &points, float zIndex, Vector4f color): points(points),
-                                                                              zIndex(std::vector<float>(
-                                                                                  points.size(), zIndex)),
-                                                                              colors(std::vector<Vector4f>(
-                                                                                  points.size(), color)),
-                                                                              pickingColor(points.size(),
-                                                                                  ZIndexToColor4f(
-                                                                                      static_cast<int>(std::round(
-                                                                                          zIndex)))) {
+    model(const std::vector<Vector2f> &points, float zIndex, Vector4f color, std::vector<Vector2f> uv): points(points),
+        zIndex(std::vector<float>(
+            points.size(), zIndex)),
+        colors(std::vector<Vector4f>(
+            points.size(), color)),
+        pickingColor(points.size(),
+                     ZIndexToColor4f(
+                         static_cast<int>(std::round(
+                             zIndex)))),
+        uv(uv) {
     }
 
     model() = default;
@@ -54,6 +57,10 @@ public:
     std::vector<Vector4f> getPickingColor() {
         return pickingColor;
     }
+
+    std::vector<Vector2f> getUV() {
+        return uv;
+    }
 };
 
 class instance : public model {
@@ -62,6 +69,7 @@ protected:
     WGPUBuffer Colors = nullptr;
     WGPUBuffer PickingColor = nullptr;
     WGPUBuffer zIndexBuffer = nullptr;
+    WGPUBuffer UV = nullptr;
 
     ModelMat modelMat = ModelMat();
     WGPUBuffer Model = nullptr;
@@ -80,6 +88,7 @@ public:
         zIndex = obj->getZIndeex();
         colors = obj->getColor();
         pickingColor = std::vector<Vector4f>(points.size(), ZIndexToColor4f(static_cast<float>(std::round(zIndex[0]))));
+        uv = obj->getUV();
 
         LoadWGPUBuffers(device, queue);
     }
@@ -91,6 +100,7 @@ public:
         wgpuBufferDestroy(Colors);
         wgpuBufferDestroy(PickingColor);
         wgpuBufferDestroy(zIndexBuffer);
+        wgpuBufferDestroy(UV);
 
         wgpuBufferDestroy(Model);
     }

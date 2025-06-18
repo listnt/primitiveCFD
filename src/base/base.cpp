@@ -242,9 +242,9 @@ Matrix4x4 computeOrthoMatrix(float left, float right, float bottom, float top, f
     ortho.m[0][0] = 2 / (right - left);
     ortho.m[1][1] = 2 / (top - bottom);
     ortho.m[2][2] = -2 / (far - near);
-    ortho.m[0][3] = -(right + left) / (right - left);
-    ortho.m[1][3] = -(top + bottom) / (top - bottom);
-    ortho.m[2][3] = -(far + near) / (far - near);
+    ortho.m[3][0] = -(right + left) / (right - left);
+    ortho.m[3][1] = -(top + bottom) / (top - bottom);
+    ortho.m[3][2] = -(far + near) / (far - near);
     ortho.m[3][3] = 1;
     return ortho;
 }

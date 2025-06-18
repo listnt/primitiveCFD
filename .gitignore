@@ -3,3 +3,6 @@
 */CMakeFiles/
 */cmake-build-emcc/
 */cmake-build-debug/
+/cmake-build-debug/
+/cmake-build-emcc/
+/CMakeFiles/

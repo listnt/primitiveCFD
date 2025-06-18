@@ -4,17 +4,13 @@
 
 #include "CFD.h"
 
-#include <webgpu/webgpu.h>
-
-#include "webgpu/wgpu.h"
-
-CFD::CFD(float step, WGPUDevice device, WGPUQueue queue) {
+CFD::CFD(float step, WGPUDevice device, WGPUQueue queue, WGPUBindGroupLayout meshDependentLayout) {
     this->step = step;
 
     float CFL = 0.9; //the Courant number is always equal to 0.9
 
-    lx = 25.6;
-    ly = 12.8;
+    lx = 64;
+    ly = 48;
     dt = CFL * step * step / 2; // compute dt based on Courant number
 
     Nx = lx / step;
@@ -22,19 +18,19 @@ CFD::CFD(float step, WGPUDevice device, WGPUQueue queue) {
 
     spheres = {
         sphere{
-            .x = static_cast<int>((6.0 / lx) * Nx),
-            .y = static_cast<int>((5.0 / ly) * Ny),
-            .r = static_cast<int>((1.0 / lx) * Nx)
+            .x = static_cast<int>((12.0 / lx) * Nx),
+            .y = static_cast<int>((24.0 / ly) * Ny),
+            .r = static_cast<int>((2.0 / lx) * Nx)
         },
         sphere{
-            .x = static_cast<int>((10.0 / lx) * Nx),
-            .y = static_cast<int>((7.0 / ly) * Ny),
-            .r = static_cast<int>((1.0 / lx) * Nx)
+            .x = static_cast<int>((25.0 / lx) * Nx),
+            .y = static_cast<int>((34.0 / ly) * Ny),
+            .r = static_cast<int>((2.0 / lx) * Nx)
         },
         sphere{
-            .x = static_cast<int>((10.0 / lx) * Nx),
-            .y = static_cast<int>((2.0 / ly) * Ny),
-            .r = static_cast<int>((1.0 / lx) * Nx)
+            .x = static_cast<int>((25.0 / lx) * Nx),
+            .y = static_cast<int>((14.0 / ly) * Ny),
+            .r = static_cast<int>((2.0 / lx) * Nx)
         },
     };
 
@@ -52,21 +48,6 @@ CFD::CFD(float step, WGPUDevice device, WGPUQueue queue) {
 
         stencilMask.push_back(std::vector<int>());
         for (int j = 0; j < Nx; j++) {
-            float x = j * step;
-
-            points.push_back(Vector2f(x, y));
-            points.push_back(Vector2f(x, y + step));
-            points.push_back(Vector2f(x + step, y + step));
-            points.push_back(Vector2f(x + step, y));
-
-            triangles.push_back(4 * (i * Nx + j));
-            triangles.push_back(4 * (i * Nx + j) + 1);
-            triangles.push_back(4 * (i * Nx + j) + 2);
-            triangles.push_back(4 * (i * Nx + j));
-            triangles.push_back(4 * (i * Nx + j) + 2);
-            triangles.push_back(4 * (i * Nx + j) + 3);
-
-
             velocity[i].push_back(Vector2f(0, 0));
             pressure[i].push_back(0);
 
@@ -77,7 +58,86 @@ CFD::CFD(float step, WGPUDevice device, WGPUQueue queue) {
         }
     }
 
-    colors = std::vector<Vector4f>(points.size(), {1, 1, 1, 1});
+    points = {
+        Vector2f(0.0, 0.0),
+        Vector2f(0.0, ly / 2.0),
+        Vector2f(lx / 2.0, ly / 2.0),
+        Vector2f(lx / 2.0, 0.0),
+
+        Vector2f(lx / 2.0, 0.0),
+        Vector2f(lx / 2.0, ly / 2.0),
+        Vector2f(lx, ly / 2.0),
+        Vector2f(lx, 0.0),
+
+        Vector2f(0.0, ly / 2.0),
+        Vector2f(0.0, ly),
+        Vector2f(lx / 2.0, ly),
+        Vector2f(lx / 2.0, ly / 2.0),
+
+        Vector2f(lx / 2.0, ly / 2.0),
+        Vector2f(lx / 2.0, ly),
+        Vector2f(lx, ly),
+        Vector2f(lx, ly / 2.0),
+    };
+
+    triangles = {
+        0, 1, 2,
+        0, 2, 3,
+
+        4, 5, 6,
+        4, 6, 7,
+
+        8, 9, 10,
+        8, 10, 11,
+
+        12, 13, 14,
+        12, 14, 15
+    };
+
+    colors = {
+        Vector4f(1, 1, 1, 1),
+        Vector4f(1, 1, 1, 1),
+        Vector4f(1, 1, 1, 1),
+        Vector4f(1, 1, 1, 1),
+
+        Vector4f(1, 0, 1, 1),
+        Vector4f(1, 0, 1, 1),
+        Vector4f(1, 0, 1, 1),
+        Vector4f(1, 0, 1, 1),
+
+        Vector4f(1, 0, 1, 1),
+        Vector4f(1, 0, 1, 1),
+        Vector4f(1, 0, 1, 1),
+        Vector4f(1, 0, 1, 1),
+
+        Vector4f(1, 1, 1, 1),
+        Vector4f(1, 1, 1, 1),
+        Vector4f(1, 1, 1, 1),
+        Vector4f(1, 1, 1, 1),
+    };
+
+    uv = {
+        Vector2f(0, 0),
+        Vector2f(0, 0.5),
+        Vector2f(0.5, 0.5),
+        Vector2f(0.5, 0),
+
+        Vector2f(0.5, 0),
+        Vector2f(0.5, 0.5),
+        Vector2f(1.0, 0.5),
+        Vector2f(1.0, 0),
+
+        Vector2f(0, 0.5),
+        Vector2f(0, 1.0),
+        Vector2f(0.5, 1.0),
+        Vector2f(0.5, 0.5),
+
+        Vector2f(0.5, 0.5),
+        Vector2f(0.5, 1.0),
+        Vector2f(1.0, 1.0),
+        Vector2f(1.0, 0.5),
+    };
+
     pickingColor = std::vector<Vector4f>(points.size(), {1, 1, 1, 1});
     zIndex = std::vector<float>(points.size(), -0.5);
 
@@ -90,13 +150,15 @@ CFD::CFD(float step, WGPUDevice device, WGPUQueue queue) {
     InitComputePipelines(device, queue);
     InitTexture(device, queue);
     InitTextureViews(device, queue);
+
+    InitRenderBindGroup(device, queue, meshDependentLayout);
 }
 
 void CFD::InitBuffers(WGPUDevice device, WGPUQueue queue) {
     WGPUBufferDescriptor bufferDescriptor = {};
     bufferDescriptor.size = sizeof(float) * triangles.size();
     bufferDescriptor.usage = WGPUBufferUsage_CopyDst | WGPUBufferUsage_Index;
-    bufferDescriptor.label = {"EBO",WGPU_STRLEN};
+    bufferDescriptor.label = "EBO";
     bufferDescriptor.mappedAtCreation = false;
     EBO = wgpuDeviceCreateBuffer(device, &bufferDescriptor);
 
@@ -105,7 +167,7 @@ void CFD::InitBuffers(WGPUDevice device, WGPUQueue queue) {
     WGPUBufferDescriptor pressureBuffer = {};
     pressureBuffer.size = colors.size() * sizeof(Vector4f);
     pressureBuffer.usage = WGPUBufferUsage_CopyDst | WGPUBufferUsage_Vertex;
-    pressureBuffer.label = {"PressureColor",WGPU_STRLEN};
+    pressureBuffer.label = "PressureColor";
     pressureBuffer.mappedAtCreation = false;
     PressureColor = wgpuDeviceCreateBuffer(device, &pressureBuffer);
 
@@ -114,7 +176,7 @@ void CFD::InitBuffers(WGPUDevice device, WGPUQueue queue) {
     WGPUBufferDescriptor pressureModel = {};
     pressureModel.size = sizeof(ModelMat);
     pressureModel.usage = WGPUBufferUsage_CopyDst | WGPUBufferUsage_Vertex;
-    pressureModel.label = {"PressureModel",WGPU_STRLEN};
+    pressureModel.label = "PressureModel";
     pressureModel.mappedAtCreation = false;
     PressureModel = wgpuDeviceCreateBuffer(device, &pressureModel);
 
@@ -122,25 +184,11 @@ void CFD::InitBuffers(WGPUDevice device, WGPUQueue queue) {
     cfdUniforms.size = sizeof(CFDUniforms);
     cfdUniforms.usage = WGPUBufferUsage_CopyDst | WGPUBufferUsage_Uniform;
     cfdUniforms.mappedAtCreation = false;
-    cfdUniforms.label = {"CFD Uniform Buffer",WGPU_STRLEN};
+    cfdUniforms.label = "CFD Uniform Buffer";
     uniformsCompute = wgpuDeviceCreateBuffer(device, &cfdUniforms);
 
-    CFDUniforms cfdU = {step, dt, rho, KinematicViscosity};
+    CFDUniforms cfdU = {step, dt, rho, KinematicViscosity, velocityIntake};
     wgpuQueueWriteBuffer(queue, uniformsCompute, 0, &cfdU, sizeof(CFDUniforms));
-
-    WGPUBufferDescriptor VelocitiesStagingBufferDesc = {};
-    VelocitiesStagingBufferDesc.label = {"staging_buffer_velocities",WGPU_STRLEN};
-    VelocitiesStagingBufferDesc.size = 8 * Nx * Ny;
-    VelocitiesStagingBufferDesc.usage = WGPUBufferUsage_MapRead | WGPUBufferUsage_CopyDst;
-    VelocitiesStagingBufferDesc.mappedAtCreation = false;
-    VelocitiesStagingBuffer = wgpuDeviceCreateBuffer(device, &VelocitiesStagingBufferDesc);
-
-    WGPUBufferDescriptor PressureStagingBufferDesc = {};
-    PressureStagingBufferDesc.label = {"staging_buffer_pressure",WGPU_STRLEN};
-    PressureStagingBufferDesc.size = 4 * Nx * Ny;
-    PressureStagingBufferDesc.usage = WGPUBufferUsage_MapRead | WGPUBufferUsage_CopyDst;
-    PressureStagingBufferDesc.mappedAtCreation = false;
-    PressureStagingBuffer = wgpuDeviceCreateBuffer(device, &PressureStagingBufferDesc);
 }
 
 void CFD::InitBindGroupLayout(WGPUDevice device, WGPUQueue queue) {
@@ -239,12 +287,84 @@ void CFD::InitBindGroupLayout(WGPUDevice device, WGPUQueue queue) {
     bgLayoutDescriptor3.entryCount = 5;
     bgLayoutDescriptor3.entries = entries.data();
     wgpuBindGroupLayoutCompute3 = wgpuDeviceCreateBindGroupLayout(device, &bgLayoutDescriptor3);
+
+    entries = std::vector<WGPUBindGroupLayoutEntry>(3);
+
+    entries[0].binding = 0;
+    entries[0].texture.sampleType = WGPUTextureSampleType_UnfilterableFloat;
+    entries[0].texture.viewDimension = WGPUTextureViewDimension_2D;
+    entries[0].visibility = WGPUShaderStage_Compute;
+
+    entries[1].binding = 1;
+    entries[1].texture.sampleType = WGPUTextureSampleType_UnfilterableFloat;
+    entries[1].texture.viewDimension = WGPUTextureViewDimension_2D;
+    entries[1].visibility = WGPUShaderStage_Compute;
+
+    entries[2].binding = 2;
+    entries[2].storageTexture.access = WGPUStorageTextureAccess_WriteOnly;
+    entries[2].storageTexture.format = WGPUTextureFormat_RGBA32Float;
+    entries[2].storageTexture.viewDimension = WGPUTextureViewDimension_2D;
+    entries[2].visibility = WGPUShaderStage_Compute;
+
+    WGPUBindGroupLayoutDescriptor bgLayoutDescriptor4 = {};
+    bgLayoutDescriptor4.entryCount = 3;
+    bgLayoutDescriptor4.entries = entries.data();
+    wgpuBindGroupLayoutCompute4 = wgpuDeviceCreateBindGroupLayout(device, &bgLayoutDescriptor4);
+
+    entries = std::vector<WGPUBindGroupLayoutEntry>(2);
+
+    entries[0].binding = 0;
+    entries[0].texture.sampleType = WGPUTextureSampleType_UnfilterableFloat;
+    entries[0].texture.viewDimension = WGPUTextureViewDimension_2D;
+    entries[0].visibility = WGPUShaderStage_Compute;
+
+    entries[1].binding = 1;
+    entries[1].storageTexture.access = WGPUStorageTextureAccess_WriteOnly;
+    entries[1].storageTexture.format = WGPUTextureFormat_RGBA32Float;
+    entries[1].storageTexture.viewDimension = WGPUTextureViewDimension_2D;
+    entries[1].visibility = WGPUShaderStage_Compute;
+
+    WGPUBindGroupLayoutDescriptor bgLayoutDescriptor5 = {};
+    bgLayoutDescriptor5.entryCount = 2;
+    bgLayoutDescriptor5.entries = entries.data();
+    wgpuBindGroupLayoutCompute5 = wgpuDeviceCreateBindGroupLayout(device, &bgLayoutDescriptor5);
+
+    entries = std::vector<WGPUBindGroupLayoutEntry>(4);
+
+    entries[0].binding = 0;
+    entries[0].texture.sampleType = WGPUTextureSampleType_UnfilterableFloat;
+    entries[0].texture.viewDimension = WGPUTextureViewDimension_2D;
+    entries[0].visibility = WGPUShaderStage_Compute;
+
+    entries[1].binding = 1;
+    entries[1].texture.sampleType = WGPUTextureSampleType_UnfilterableFloat;
+    entries[1].texture.viewDimension = WGPUTextureViewDimension_2D;
+    entries[1].visibility = WGPUShaderStage_Compute;
+
+    entries[2].binding = 2;
+    entries[2].texture.sampleType = WGPUTextureSampleType_Uint;
+    entries[2].texture.viewDimension = WGPUTextureViewDimension_2D;
+    entries[2].visibility = WGPUShaderStage_Compute;
+
+    entries[3].binding = 3;
+    entries[3].storageTexture.access = WGPUStorageTextureAccess_WriteOnly;
+    entries[3].storageTexture.format = WGPUTextureFormat_RGBA8Uint;
+    entries[3].storageTexture.viewDimension = WGPUTextureViewDimension_2D;
+    entries[3].visibility = WGPUShaderStage_Compute;
+
+    WGPUBindGroupLayoutDescriptor bgLayoutDescriptor6 = {};
+    bgLayoutDescriptor6.entryCount = 4;
+    bgLayoutDescriptor6.entries = entries.data();
+    wgpuBindGroupLayoutCompute6 = wgpuDeviceCreateBindGroupLayout(device, &bgLayoutDescriptor6);
 }
 
 void CFD::InitComputePipelines(WGPUDevice device, WGPUQueue queue) {
     InitComputePipeline1(device, queue);
     InitComputePipeline2(device, queue);
     InitComputePipeline3(device, queue);
+    InitComputePipeline4(device, queue);
+    InitComputePipeline5(device, queue);
+    InitComputePipeline6(device, queue);
 }
 
 void CFD::InitComputePipeline1(WGPUDevice device, WGPUQueue queue) {
@@ -259,9 +379,9 @@ void CFD::InitComputePipeline1(WGPUDevice device, WGPUQueue queue) {
     WGPUComputePipelineDescriptor pipelineDescriptor = {};
     pipelineDescriptor.compute.constantCount = 0;
     pipelineDescriptor.compute.constants = nullptr;
-    pipelineDescriptor.compute.entryPoint = {"computeNewVelocities", WGPU_STRLEN};
+    pipelineDescriptor.compute.entryPoint = "computeNewVelocities";
     pipelineDescriptor.compute.module = computeShader1Module;
-    pipelineDescriptor.label = {"Compute pipeline velocities",WGPU_STRLEN};
+    pipelineDescriptor.label = "Compute pipeline velocities";
     pipelineDescriptor.layout = piplineDesc;
     wgpuComputePipelineCompute1 = wgpuDeviceCreateComputePipeline(device, &pipelineDescriptor);
 }
@@ -277,9 +397,9 @@ void CFD::InitComputePipeline2(WGPUDevice device, WGPUQueue queue) {
     WGPUComputePipelineDescriptor pipelineDescriptor = {};
     pipelineDescriptor.compute.constantCount = 0;
     pipelineDescriptor.compute.constants = nullptr;
-    pipelineDescriptor.compute.entryPoint = {"computeNewPressure", WGPU_STRLEN};
+    pipelineDescriptor.compute.entryPoint = "computeNewPressure";
     pipelineDescriptor.compute.module = computeShader2Module;
-    pipelineDescriptor.label = {"Compute pipeline pressure",WGPU_STRLEN};
+    pipelineDescriptor.label = "Compute pipeline pressure";
     pipelineDescriptor.layout = piplineDesc;
     wgpuComputePipelineCompute2 = wgpuDeviceCreateComputePipeline(device, &pipelineDescriptor);
 }
@@ -295,13 +415,66 @@ void CFD::InitComputePipeline3(WGPUDevice device, WGPUQueue queue) {
     WGPUComputePipelineDescriptor pipelineDescriptor = {};
     pipelineDescriptor.compute.constantCount = 0;
     pipelineDescriptor.compute.constants = nullptr;
-    pipelineDescriptor.compute.entryPoint = {"computeFinalVelocites", WGPU_STRLEN};
+    pipelineDescriptor.compute.entryPoint = "computeFinalVelocites";
     pipelineDescriptor.compute.module = computeShader3Module;
-    pipelineDescriptor.label = {"Compute final velocities",WGPU_STRLEN};
+    pipelineDescriptor.label = "Compute final velocities";
     pipelineDescriptor.layout = piplineDesc;
     wgpuComputePipelineCompute3 = wgpuDeviceCreateComputePipeline(device, &pipelineDescriptor);
 }
 
+void CFD::InitComputePipeline4(WGPUDevice device, WGPUQueue queue) {
+    WGPUShaderModule computeShader4Module = createShader(device, "Compute prepare curl texture",
+                                                         std::string("shaders/step4Compute.wgsl").c_str());
+    WGPUPipelineLayoutDescriptor pipelineLayoutDescriptor = {};
+    pipelineLayoutDescriptor.bindGroupLayoutCount = 1;
+    pipelineLayoutDescriptor.bindGroupLayouts = &wgpuBindGroupLayoutCompute4;
+    auto piplineDesc = wgpuDeviceCreatePipelineLayout(device, &pipelineLayoutDescriptor);
+
+    WGPUComputePipelineDescriptor pipelineDescriptor = {};
+    pipelineDescriptor.compute.constantCount = 0;
+    pipelineDescriptor.compute.constants = nullptr;
+    pipelineDescriptor.compute.entryPoint = "computeCurlP";
+    pipelineDescriptor.compute.module = computeShader4Module;
+    pipelineDescriptor.label = "Compute curl P";
+    pipelineDescriptor.layout = piplineDesc;
+    wgpuComputePipelineCompute4 = wgpuDeviceCreateComputePipeline(device, &pipelineDescriptor);
+}
+
+void CFD::InitComputePipeline5(WGPUDevice device, WGPUQueue queue) {
+    WGPUShaderModule computeShader5Module = createShader(device, "Compute min max mip levels",
+                                                         std::string("shaders/step5Compute.wgsl").c_str());
+    WGPUPipelineLayoutDescriptor pipelineLayoutDescriptor = {};
+    pipelineLayoutDescriptor.bindGroupLayoutCount = 1;
+    pipelineLayoutDescriptor.bindGroupLayouts = &wgpuBindGroupLayoutCompute5;
+    auto piplineDesc = wgpuDeviceCreatePipelineLayout(device, &pipelineLayoutDescriptor);
+
+    WGPUComputePipelineDescriptor pipelineDescriptor = {};
+    pipelineDescriptor.compute.constantCount = 0;
+    pipelineDescriptor.compute.constants = nullptr;
+    pipelineDescriptor.compute.entryPoint = "computeMinMax";
+    pipelineDescriptor.compute.module = computeShader5Module;
+    pipelineDescriptor.label = "Compute min max curl P";
+    pipelineDescriptor.layout = piplineDesc;
+    wgpuComputePipelineCompute5 = wgpuDeviceCreateComputePipeline(device, &pipelineDescriptor);
+}
+
+void CFD::InitComputePipeline6(WGPUDevice device, WGPUQueue queue) {
+    WGPUShaderModule computeShader6Module = createShader(device, "Compute final color",
+                                                         std::string("shaders/step6Compute.wgsl").c_str());
+    WGPUPipelineLayoutDescriptor pipelineLayoutDescriptor = {};
+    pipelineLayoutDescriptor.bindGroupLayoutCount = 1;
+    pipelineLayoutDescriptor.bindGroupLayouts = &wgpuBindGroupLayoutCompute6;
+    auto piplineDesc = wgpuDeviceCreatePipelineLayout(device, &pipelineLayoutDescriptor);
+
+    WGPUComputePipelineDescriptor pipelineDescriptor = {};
+    pipelineDescriptor.compute.constantCount = 0;
+    pipelineDescriptor.compute.constants = nullptr;
+    pipelineDescriptor.compute.entryPoint = "computeFinalColor";
+    pipelineDescriptor.compute.module = computeShader6Module;
+    pipelineDescriptor.label = "Compute final color";
+    pipelineDescriptor.layout = piplineDesc;
+    wgpuComputePipelineCompute6 = wgpuDeviceCreateComputePipeline(device, &pipelineDescriptor);
+}
 
 void CFD::InitTexture(WGPUDevice device, WGPUQueue queue) {
     WGPUExtent3D extent;
@@ -309,14 +482,14 @@ void CFD::InitTexture(WGPUDevice device, WGPUQueue queue) {
     extent.height = Ny;
     extent.depthOrArrayLayers = 1;
 
-    std::vector<WGPUTextureDescriptor> textureDesc(5);
+    std::vector<WGPUTextureDescriptor> textureDesc(7);
     textureDesc[0].dimension = WGPUTextureDimension_2D;
     textureDesc[0].format = WGPUTextureFormat_RG32Float;
     textureDesc[0].size = extent;
     textureDesc[0].sampleCount = 1;
     textureDesc[0].viewFormatCount = 0;
     textureDesc[0].viewFormats = nullptr;
-    textureDesc[0].label = {"newVelocities", WGPU_STRLEN};
+    textureDesc[0].label = "newVelocities";
 
     textureDesc[0].usage = (
         WGPUTextureUsage_TextureBinding |
@@ -333,7 +506,7 @@ void CFD::InitTexture(WGPUDevice device, WGPUQueue queue) {
     textureDesc[1].sampleCount = 1;
     textureDesc[1].viewFormatCount = 0;
     textureDesc[1].viewFormats = nullptr;
-    textureDesc[1].label = {"Stencil mask", WGPU_STRLEN};
+    textureDesc[1].label = "Stencil mask";
 
     textureDesc[1].usage = (
         WGPUTextureUsage_TextureBinding |
@@ -348,7 +521,7 @@ void CFD::InitTexture(WGPUDevice device, WGPUQueue queue) {
     textureDesc[2].sampleCount = 1;
     textureDesc[2].viewFormatCount = 0;
     textureDesc[2].viewFormats = nullptr;
-    textureDesc[2].label = {"Output velocities", WGPU_STRLEN};
+    textureDesc[2].label = "Output velocities";
 
     textureDesc[2].usage = (
         WGPUTextureUsage_TextureBinding | // to bind the texture in a shader
@@ -364,7 +537,7 @@ void CFD::InitTexture(WGPUDevice device, WGPUQueue queue) {
     textureDesc[3].sampleCount = 1;
     textureDesc[3].viewFormatCount = 0;
     textureDesc[3].viewFormats = nullptr;
-    textureDesc[3].label = {"Input pressure", WGPU_STRLEN};
+    textureDesc[3].label = "Input pressure";
     textureDesc[3].usage = (
         WGPUTextureUsage_TextureBinding |
         WGPUTextureUsage_StorageBinding |
@@ -379,7 +552,7 @@ void CFD::InitTexture(WGPUDevice device, WGPUQueue queue) {
     textureDesc[4].sampleCount = 1;
     textureDesc[4].viewFormatCount = 0;
     textureDesc[4].viewFormats = nullptr;
-    textureDesc[4].label = {"Output pressure", WGPU_STRLEN};
+    textureDesc[4].label = "Output pressure";
     textureDesc[4].usage = (
         WGPUTextureUsage_TextureBinding | // to bind the texture in a shader
         WGPUTextureUsage_StorageBinding | // to write the texture in a shader
@@ -387,19 +560,53 @@ void CFD::InitTexture(WGPUDevice device, WGPUQueue queue) {
     );
     textureDesc[4].mipLevelCount = 1;
 
+    textureDesc[5].dimension = WGPUTextureDimension_2D;
+    textureDesc[5].format = WGPUTextureFormat_RGBA32Float;
+    textureDesc[5].size = extent;
+    textureDesc[5].sampleCount = 1;
+    textureDesc[5].viewFormatCount = 0;
+    textureDesc[5].viewFormats = nullptr;
+    textureDesc[5].label = "texture curl P";
+    textureDesc[5].usage = (
+        WGPUTextureUsage_TextureBinding |
+        WGPUTextureUsage_StorageBinding |
+        WGPUTextureUsage_CopySrc |
+        WGPUTextureUsage_CopyDst
+    );
+    textureDesc[5].mipLevelCount = getMaxMipLevelCount(extent);
+
+    textureCurlPMipSizes.resize(textureDesc[5].mipLevelCount);
+    textureCurlPMipSizes[0] = extent;
+
+    textureDesc[6].dimension = WGPUTextureDimension_2D;
+    textureDesc[6].format = WGPUTextureFormat_RGBA8Uint;
+    textureDesc[6].size = extent;
+    textureDesc[6].sampleCount = 1;
+    textureDesc[6].viewFormatCount = 0;
+    textureDesc[6].viewFormats = nullptr;
+    textureDesc[6].label = "final color";
+    textureDesc[6].usage = (
+        WGPUTextureUsage_TextureBinding |
+        WGPUTextureUsage_StorageBinding |
+        WGPUTextureUsage_CopyDst
+    );
+    textureDesc[6].mipLevelCount = 1;
+
     textureInputVelocities = wgpuDeviceCreateTexture(device, &textureDesc[0]);
     stencilTexture = wgpuDeviceCreateTexture(device, &textureDesc[1]);
     textureOutputVelocities = wgpuDeviceCreateTexture(device, &textureDesc[2]);
     textureInputPressure = wgpuDeviceCreateTexture(device, &textureDesc[3]);
     textureOutputPressure = wgpuDeviceCreateTexture(device, &textureDesc[4]);
+    textureCurlP = wgpuDeviceCreateTexture(device, &textureDesc[5]);
+    textureFancyColors = wgpuDeviceCreateTexture(device, &textureDesc[6]);
 
-    WGPUTexelCopyTextureInfo destination = {};
+    WGPUImageCopyTexture destination = {};
     destination.texture = textureInputVelocities;
     destination.origin = {0, 0, 0};
     destination.aspect = WGPUTextureAspect_All;
     destination.mipLevel = 0;
 
-    WGPUTexelCopyBufferLayout source = {};
+    WGPUTextureDataLayout source = {};
     source.offset = 0;
     source.bytesPerRow = 8 * Nx;
     source.rowsPerImage = Ny;
@@ -425,34 +632,59 @@ void CFD::InitTextureViews(WGPUDevice device, WGPUQueue queue) {
     textureViewDesc.dimension = WGPUTextureViewDimension_2D;
     textureViewDesc.format = WGPUTextureFormat_RG32Float;
     textureViewDesc.mipLevelCount = 1;
-    textureViewDesc.label = {"newVelocities",WGPU_STRLEN};
+    textureViewDesc.label = "newVelocities";
     textureViewDesc.baseMipLevel = 0;
 
     textureViewInputVelocities = wgpuTextureCreateView(this->textureInputVelocities, &textureViewDesc);
 
-    textureViewDesc.label = {"newVelocitiesOutput",WGPU_STRLEN};
+    textureViewDesc.label = "newVelocitiesOutput";
 
     textureViewOutputVelocities = wgpuTextureCreateView(textureOutputVelocities, &textureViewDesc);
 
-    textureViewDesc.label = {"stencilMask",WGPU_STRLEN};
+    textureViewDesc.label = "stencilMask";
     textureViewDesc.format = WGPUTextureFormat_R32Uint;
 
     stencilTextureView = wgpuTextureCreateView(stencilTexture, &textureViewDesc);
 
-    textureViewDesc.label = {"pressureInput",WGPU_STRLEN};
+    textureViewDesc.label = "pressureInput";
     textureViewDesc.format = WGPUTextureFormat_R32Float;
 
     textureViewInputPressure = wgpuTextureCreateView(textureInputPressure, &textureViewDesc);
 
-    textureViewDesc.label = {"pressureOutput",WGPU_STRLEN};
+    textureViewDesc.label = "pressureOutput";
 
     textureViewOutputPressure = wgpuTextureCreateView(textureOutputPressure, &textureViewDesc);
+
+    textureViewDesc.format = WGPUTextureFormat_RGBA32Float;
+
+    for (int level = 0; level < textureCurlPMipSizes.size(); ++level) {
+        textureViewDesc.label = "curlP Mip level" + level;
+        textureViewDesc.baseMipLevel = level;
+
+        textureViewCurlPMipViews.push_back(wgpuTextureCreateView(textureCurlP, &textureViewDesc));
+        if (level > 0) {
+            WGPUExtent3D previousSuze = textureCurlPMipSizes[level - 1];
+            textureCurlPMipSizes[level] = {
+                previousSuze.width / 2,
+                previousSuze.height / 2,
+                previousSuze.depthOrArrayLayers / 2
+            };
+        }
+    }
+
+    textureViewDesc.format = WGPUTextureFormat_RGBA8Uint;
+    textureViewDesc.label = "final color";
+    textureViewDesc.baseMipLevel = 0;
+
+    textureViewFancyColor = wgpuTextureCreateView(textureFancyColors, &textureViewDesc);
 }
 
 void CFD::Render(WGPUDevice device, WGPUQueue queue, WGPURenderPassEncoder pass, WGPUBuffer uniforms) {
-    UpdateColors(device, queue);
+    // UpdateColors(device, queue);
 
-    Matrix4x4 Velocity = translate(T.x - lx / 2, T.y - 0.2 * ly, T.z) *
+    wgpuRenderPassEncoderSetBindGroup(pass, 1, wgpuBindGroupRender, 0, 0);
+
+    Matrix4x4 Velocity = translate(T.x, T.y, T.z) *
                          roll(R.z) * pitch(R.y) * yaw(R.z) *
                          scale(S.x, S.y, S.z);
 
@@ -463,14 +695,15 @@ void CFD::Render(WGPUDevice device, WGPUQueue queue, WGPURenderPassEncoder pass,
     wgpuRenderPassEncoderSetVertexBuffer(pass, 0, Positions, 0, points.size() * sizeof(Vector2f));
     wgpuRenderPassEncoderSetVertexBuffer(pass, 1, Colors, 0, colors.size() * sizeof(Vector4f));
     wgpuRenderPassEncoderSetVertexBuffer(pass, 2, zIndexBuffer, 0, zIndex.size() * sizeof(float));
+    wgpuRenderPassEncoderSetVertexBuffer(pass, 3, UV, 0, uv.size() * sizeof(Vector2f));
 
-    wgpuRenderPassEncoderSetVertexBuffer(pass, 3, this->Model, 0, sizeof(ModelMat));
+    wgpuRenderPassEncoderSetVertexBuffer(pass, 4, this->Model, 0, sizeof(ModelMat));
 
     wgpuRenderPassEncoderSetIndexBuffer(pass, EBO, WGPUIndexFormat_Uint32, 0, triangles.size() * sizeof(int));
 
     wgpuRenderPassEncoderDrawIndexed(pass, triangles.size(), 1, 0, 0, 0);
 
-    Matrix4x4 Pressure = translate(T.x - lx / 2, T.y - 1.05 * ly - 0.2 * ly, T.z) *
+    Matrix4x4 Pressure = translate(T.x, T.y - 1.05 * ly, T.z) *
                          roll(R.z) * pitch(R.y) * yaw(R.x) *
                          scale(S.x, S.y, S.z);
 
@@ -481,8 +714,9 @@ void CFD::Render(WGPUDevice device, WGPUQueue queue, WGPURenderPassEncoder pass,
     wgpuRenderPassEncoderSetVertexBuffer(pass, 0, Positions, 0, points.size() * sizeof(Vector2f));
     wgpuRenderPassEncoderSetVertexBuffer(pass, 1, PressureColor, 0, colors.size() * sizeof(Vector4f));
     wgpuRenderPassEncoderSetVertexBuffer(pass, 2, zIndexBuffer, 0, zIndex.size() * sizeof(float));
+    wgpuRenderPassEncoderSetVertexBuffer(pass, 3, UV, 0, uv.size() * sizeof(Vector2f));
 
-    wgpuRenderPassEncoderSetVertexBuffer(pass, 3, this->PressureModel, 0, sizeof(ModelMat));
+    wgpuRenderPassEncoderSetVertexBuffer(pass, 4, this->PressureModel, 0, sizeof(ModelMat));
 
     wgpuRenderPassEncoderSetIndexBuffer(pass, EBO, WGPUIndexFormat_Uint32, 0, triangles.size() * sizeof(int));
 
@@ -494,17 +728,21 @@ void CFD::InitGrid() {
     for (int i = 0; i < Nx; i++) {
         // Bottom wall
         stencilMask[0][i] = 0;
+        stencilMask[1][i] = 0;
+        stencilMask[2][i] = 0;
 
         // Top wall
         stencilMask[Ny - 1][i] = 0;
+        stencilMask[Ny - 2][i] = 0;
+        stencilMask[Ny - 3][i] = 0;
     }
 
     for (int i = 0; i < Ny; i++) {
-        // Left wall
-        stencilMask[i][0] = 0;
+        // Left wall, inlet
+        stencilMask[i][0] = 1;
 
-        // Right wall
-        stencilMask[i][Nx - 1] = 1;
+        // Right wall, outlet
+        stencilMask[i][Nx - 1] = 2;
     }
 
     // initialize velocity and pressure
@@ -541,13 +779,70 @@ float CFD::getDt() {
     return dt;
 }
 
-void CFD::UpdateGrid(WGPUDevice device, WGPUQueue queue) {
+void CFD::DrawObstacle(WGPUQueue queue, float x, float y) {
+    int j = x / lx * Nx;
+    int i = y / ly * Ny;
+
+    if (i < Ny && i > 0 && j < Nx && j > 0) {
+        stencilMask[i][j] = 0;
+    }
+
+    if (i - 1 < Ny && i - 1 > 0 && j < Nx && j > 0) {
+        stencilMask[i - 1][j] = 0;
+    }
+
+    if (i < Ny && i > 0 && j + 1 < Nx && j + 1 > 0) {
+        stencilMask[i][j + 1] = 0;
+    }
+
+    if (i + 1 < Ny && i + 1 > 0 && j < Nx && j > 0) {
+        stencilMask[i + 1][j] = 0;
+    }
+
+    if (i < Ny && i > 0 && j - 1 < Nx && j - 1 > 0) {
+        stencilMask[i][j - 1] = 0;
+    }
+
+    WGPUExtent3D extent;
+    extent.width = Nx;
+    extent.height = Ny;
+    extent.depthOrArrayLayers = 1;
+
+    WGPUImageCopyTexture destination = {};
+    destination.texture = stencilTexture;
+    destination.origin = {0, 0, 0};
+    destination.aspect = WGPUTextureAspect_All;
+    destination.mipLevel = 0;
+
+    WGPUTextureDataLayout source = {};
+    source.offset = 0;
+    source.bytesPerRow = 4 * Nx;
+    source.rowsPerImage = Ny;
+
+    wgpuQueueWriteTexture(queue, &destination, flatten(stencilMask).data(), 4 * Nx * Ny, &source, &extent);
+
+    wgpuTextureViewRelease(stencilTextureView);
+
+    WGPUTextureViewDescriptor textureViewDesc = {};
+    textureViewDesc.aspect = WGPUTextureAspect_All;
+    textureViewDesc.baseArrayLayer = 0;
+    textureViewDesc.arrayLayerCount = 1;
+    textureViewDesc.dimension = WGPUTextureViewDimension_2D;
+    textureViewDesc.mipLevelCount = 1;
+    textureViewDesc.baseMipLevel = 0;
+    textureViewDesc.label = "stencilMask";
+    textureViewDesc.format = WGPUTextureFormat_R32Uint;
+
+    stencilTextureView = wgpuTextureCreateView(stencilTexture, &textureViewDesc);
+}
+
+void CFD::UpdateGrid(WGPUDevice device, WGPUQueue queue, int frames) {
     WGPUCommandEncoderDescriptor encoderDesc = {};
     WGPUCommandEncoder encoder = wgpuDeviceCreateCommandEncoder(device, &encoderDesc);
 
     WGPUComputePassDescriptor computePassDesc = {};
     computePassDesc.timestampWrites = nullptr;
-    computePassDesc.label = {"Compute",WGPU_STRLEN};
+    computePassDesc.label = "Compute";
 
     uint32_t invocationCountX = Nx;
     uint32_t invocationCountY = Ny;
@@ -558,76 +853,69 @@ void CFD::UpdateGrid(WGPUDevice device, WGPUQueue queue) {
 
     WGPUComputePassEncoder computePass = wgpuCommandEncoderBeginComputePass(encoder, &computePassDesc);
 
-    InitBindGroup1(device, queue);
-    wgpuComputePassEncoderSetPipeline(computePass, wgpuComputePipelineCompute1);
-    wgpuComputePassEncoderSetBindGroup(computePass, 0, wgpuBindGroupCompute1, 0, nullptr);
-
-    wgpuComputePassEncoderDispatchWorkgroups(computePass, workgroupCountX, workgroupCountY, 1);
-    wgpuBindGroupRelease(this->wgpuBindGroupCompute1);
-
-    auto swapP = false;
-    for (int i = 0; i < 20; i++) {
-        InitBindGroup2(device, queue, swapP);
-        wgpuComputePassEncoderSetPipeline(computePass, wgpuComputePipelineCompute2);
-        wgpuComputePassEncoderSetBindGroup(computePass, 0, wgpuBindGroupCompute2, 0, nullptr);
+    for (int i = 0; i < frames; i++) {
+        InitBindGroup1(device, queue);
+        wgpuComputePassEncoderSetPipeline(computePass, wgpuComputePipelineCompute1);
+        wgpuComputePassEncoderSetBindGroup(computePass, 0, wgpuBindGroupCompute1, 0, nullptr);
 
         wgpuComputePassEncoderDispatchWorkgroups(computePass, workgroupCountX, workgroupCountY, 1);
+        wgpuBindGroupRelease(this->wgpuBindGroupCompute1);
 
-        wgpuBindGroupRelease(this->wgpuBindGroupCompute2);
+        auto swapP = false;
+        for (int i = 0; i < 20; i++) {
+            InitBindGroup2(device, queue, swapP);
+            wgpuComputePassEncoderSetPipeline(computePass, wgpuComputePipelineCompute2);
+            wgpuComputePassEncoderSetBindGroup(computePass, 0, wgpuBindGroupCompute2, 0, nullptr);
 
-        swapP = !swapP;
+            wgpuComputePassEncoderDispatchWorkgroups(computePass, workgroupCountX, workgroupCountY, 1);
+
+            wgpuBindGroupRelease(this->wgpuBindGroupCompute2);
+
+            swapP = !swapP;
+        }
+
+        WGPUTextureView inputPressure = textureViewOutputPressure;
+        if (swapP) {
+            inputPressure = textureViewInputPressure;
+        }
+
+        InitBindGroup3(device, queue, inputPressure);
+        wgpuComputePassEncoderSetPipeline(computePass, wgpuComputePipelineCompute3);
+        wgpuComputePassEncoderSetBindGroup(computePass, 0, wgpuBindGroupCompute3, 0, nullptr);
+
+        wgpuComputePassEncoderDispatchWorkgroups(computePass, workgroupCountX, workgroupCountY, 1);
+        wgpuBindGroupRelease(this->wgpuBindGroupCompute3);
     }
 
-    WGPUTextureView inputPressure = textureViewOutputPressure;
-    if (swapP) {
-        inputPressure = textureViewInputPressure;
-    }
-
-    InitBindGroup3(device, queue, inputPressure);
-    wgpuComputePassEncoderSetPipeline(computePass, wgpuComputePipelineCompute3);
-    wgpuComputePassEncoderSetBindGroup(computePass, 0, wgpuBindGroupCompute3, 0, nullptr);
+    InitBindGroup4(device, queue);
+    wgpuComputePassEncoderSetPipeline(computePass, wgpuComputePipelineCompute4);
+    wgpuComputePassEncoderSetBindGroup(computePass, 0, wgpuBindGroupCompute4, 0, nullptr);
 
     wgpuComputePassEncoderDispatchWorkgroups(computePass, workgroupCountX, workgroupCountY, 1);
-    wgpuBindGroupRelease(this->wgpuBindGroupCompute3);
+    wgpuBindGroupRelease(this->wgpuBindGroupCompute4);
+
+    wgpuComputePassEncoderSetPipeline(computePass, wgpuComputePipelineCompute5);
+    for (int level = 1; level < textureCurlPMipSizes.size(); level++) {
+        InitBindGroup5(device, queue, level);
+        wgpuComputePassEncoderSetBindGroup(computePass, 0, wgpuBindGroupCompute5, 0, nullptr);
+
+        wgpuComputePassEncoderDispatchWorkgroups(computePass, workgroupCountX, workgroupCountY, 1);
+        wgpuBindGroupRelease(this->wgpuBindGroupCompute5);
+    }
+
+    InitBindGroup6(device, queue);
+    wgpuComputePassEncoderSetPipeline(computePass, wgpuComputePipelineCompute6);
+    wgpuComputePassEncoderSetBindGroup(computePass, 0, wgpuBindGroupCompute6, 0, nullptr);
+
+    wgpuComputePassEncoderDispatchWorkgroups(computePass, workgroupCountX, workgroupCountY, 1);
+    wgpuBindGroupRelease(this->wgpuBindGroupCompute6);
 
     wgpuComputePassEncoderEnd(computePass);
     wgpuComputePassEncoderRelease(computePass); // release pass
 
-    // Encode texture-to-buffer copy
-    WGPUTexelCopyTextureInfo srcV = {};
-    srcV.texture = textureOutputVelocities;
-    srcV.mipLevel = 0;
-    srcV.origin = {0, 0, 0};
-    srcV.aspect = WGPUTextureAspect_All;
-
-    WGPUTexelCopyBufferInfo dstV = {};
-    dstV.buffer = VelocitiesStagingBuffer;
-    dstV.layout.offset = 0;
-    dstV.layout.bytesPerRow = Nx * 8; // 8 bytes per texel
-    dstV.layout.rowsPerImage = Ny;
-
-    WGPUExtent3D copy_size = {static_cast<uint32_t>(Nx), static_cast<uint32_t>(Ny), 1};
-
-    wgpuCommandEncoderCopyTextureToBuffer(encoder, &srcV, &dstV, &copy_size);
-
-    // Encode texture-to-buffer copy
-    WGPUTexelCopyTextureInfo srcP = {};
-    srcP.texture = textureOutputPressure;
-    srcP.mipLevel = 0;
-    srcP.origin = {0, 0, 0};
-    srcP.aspect = WGPUTextureAspect_All;
-
-    WGPUTexelCopyBufferInfo dstP = {};
-    dstP.buffer = PressureStagingBuffer;
-    dstP.layout.offset = 0;
-    dstP.layout.bytesPerRow = Nx * 4; // 4 bytes per texel
-    dstP.layout.rowsPerImage = Ny;
-
-    wgpuCommandEncoderCopyTextureToBuffer(encoder, &srcP, &dstP, &copy_size);
-
     WGPUCommandBufferDescriptor commandDesc = {};
     commandDesc.nextInChain = nullptr;
-    commandDesc.label = {"Command buffer",WGPU_STRLEN};
+    commandDesc.label = "Command buffer";
 
     WGPUCommandBuffer commands = wgpuCommandEncoderFinish(encoder, &commandDesc); // create commands
     wgpuCommandEncoderRelease(encoder); // release encoder
@@ -655,7 +943,7 @@ void CFD::InitBindGroup1(WGPUDevice device, WGPUQueue queue) {
     entries[3].size = sizeof(CFDUniforms);
 
     WGPUBindGroupDescriptor bgDesc = {};
-    bgDesc.label = {"BindGroup1",WGPU_STRLEN};
+    bgDesc.label = "BindGroup1";
     bgDesc.layout = wgpuBindGroupLayoutCompute1;
     bgDesc.entryCount = 4;
     bgDesc.entries = entries.data();
@@ -691,7 +979,7 @@ void CFD::InitBindGroup2(WGPUDevice device, WGPUQueue queue, bool swapP) {
     entries[4].size = sizeof(CFDUniforms);
 
     WGPUBindGroupDescriptor bgDesc = {};
-    bgDesc.label = {"BindGroup2",WGPU_STRLEN};
+    bgDesc.label = "BindGroup2";
     bgDesc.layout = wgpuBindGroupLayoutCompute2;
     bgDesc.entryCount = 5;
     bgDesc.entries = entries.data();
@@ -719,11 +1007,85 @@ void CFD::InitBindGroup3(WGPUDevice device, WGPUQueue queue, WGPUTextureView inp
     entries[4].size = sizeof(CFDUniforms);
 
     WGPUBindGroupDescriptor bgDesc = {};
-    bgDesc.label = {"BindGroup3",WGPU_STRLEN};
+    bgDesc.label = "BindGroup3";
     bgDesc.layout = wgpuBindGroupLayoutCompute3;
     bgDesc.entryCount = 5;
     bgDesc.entries = entries.data();
     wgpuBindGroupCompute3 = wgpuDeviceCreateBindGroup(device, &bgDesc);
+}
+
+void CFD::InitBindGroup4(WGPUDevice device, WGPUQueue queue) {
+    static std::vector<WGPUBindGroupEntry> entries(3);
+
+    entries[0].binding = 0;
+    entries[0].textureView = textureViewInputVelocities;
+
+    entries[1].binding = 1;
+    entries[1].textureView = textureViewInputPressure;
+
+    entries[2].binding = 2;
+    entries[2].textureView = textureViewCurlPMipViews[0];
+
+    WGPUBindGroupDescriptor bgDesc = {};
+    bgDesc.label = "BindGroup4";
+    bgDesc.layout = wgpuBindGroupLayoutCompute4;
+    bgDesc.entryCount = 3;
+    bgDesc.entries = entries.data();
+    wgpuBindGroupCompute4 = wgpuDeviceCreateBindGroup(device, &bgDesc);
+}
+
+void CFD::InitBindGroup5(WGPUDevice device, WGPUQueue queue, int nextMipLevel) {
+    static std::vector<WGPUBindGroupEntry> entries(2);
+
+    entries[0].binding = 0;
+    entries[0].textureView = textureViewCurlPMipViews[nextMipLevel - 1];
+
+    entries[1].binding = 1;
+    entries[1].textureView = textureViewCurlPMipViews[nextMipLevel];
+
+    WGPUBindGroupDescriptor bgDesc = {};
+    bgDesc.label = "BindGroup5";
+    bgDesc.layout = wgpuBindGroupLayoutCompute5;
+    bgDesc.entryCount = 2;
+    bgDesc.entries = entries.data();
+    wgpuBindGroupCompute5 = wgpuDeviceCreateBindGroup(device, &bgDesc);
+}
+
+void CFD::InitBindGroup6(WGPUDevice device, WGPUQueue queue) {
+    static std::vector<WGPUBindGroupEntry> entries(4);
+
+    entries[0].binding = 0;
+    entries[0].textureView = textureViewCurlPMipViews[0];
+
+    entries[1].binding = 1;
+    entries[1].textureView = textureViewCurlPMipViews[textureCurlPMipSizes.size() - 1];
+
+    entries[2].binding = 2;
+    entries[2].textureView = stencilTextureView;
+
+    entries[3].binding = 3;
+    entries[3].textureView = textureViewFancyColor;
+
+    WGPUBindGroupDescriptor bgDesc = {};
+    bgDesc.label = "BindGroup6";
+    bgDesc.layout = wgpuBindGroupLayoutCompute6;
+    bgDesc.entryCount = 4;
+    bgDesc.entries = entries.data();
+    wgpuBindGroupCompute6 = wgpuDeviceCreateBindGroup(device, &bgDesc);
+}
+
+void CFD::InitRenderBindGroup(WGPUDevice device, WGPUQueue, WGPUBindGroupLayout meshDependentLayout) {
+    WGPUBindGroupEntry entry = {};
+
+    entry.binding = 0;
+    entry.textureView = textureViewFancyColor;
+
+    WGPUBindGroupDescriptor bgDesc = {};
+    bgDesc.label = "RenderBindGroup";
+    bgDesc.layout = meshDependentLayout;
+    bgDesc.entryCount = 1;
+    bgDesc.entries = &entry;
+    wgpuBindGroupRender = wgpuDeviceCreateBindGroup(device, &bgDesc);
 }
 
 void CFD::SetVelocityBorderCondition(std::vector<std::vector<Vector2f> > &velocity_ptr) {
@@ -731,9 +1093,13 @@ void CFD::SetVelocityBorderCondition(std::vector<std::vector<Vector2f> > &veloci
     for (int i = 0; i < Nx; i++) {
         // Bottom wall
         velocity_ptr[0][i] = Vector2f(0, 0);
+        velocity_ptr[1][i] = Vector2f(0, 0);
+        velocity_ptr[2][i] = Vector2f(0, 0);
 
         // Top wall
         velocity_ptr[Ny - 1][i] = Vector2f(0, 0);
+        velocity_ptr[Ny - 2][i] = Vector2f(0, 0);
+        velocity_ptr[Ny - 3][i] = Vector2f(0, 0);
     }
 
     for (int i = 0; i < Ny; i++) {
@@ -748,10 +1114,14 @@ void CFD::SetVelocityBorderCondition(std::vector<std::vector<Vector2f> > &veloci
 void CFD::SetPressureBorderCondition(std::vector<std::vector<float> > &pressure_ptr) {
     for (int i = 0; i < Nx; i++) {
         // Bottom wall, Neumann condition
-        pressure_ptr[0][i] = pressure_ptr[1][i];
+        pressure_ptr[0][i] = 0;
+        pressure_ptr[1][i] = 0;
+        pressure_ptr[2][i] = pressure_ptr[3][i];
 
         // Top wall, Neumann condition
-        pressure_ptr[Ny - 1][i] = pressure_ptr[Ny - 2][i];
+        pressure_ptr[Ny - 1][i] = 0;
+        pressure_ptr[Ny - 2][i] = 0;
+        pressure_ptr[Ny - 3][i] = pressure_ptr[Ny - 4][i];
     }
 
     for (int i = 0; i < Ny; i++) {
@@ -761,153 +1131,4 @@ void CFD::SetPressureBorderCondition(std::vector<std::vector<float> > &pressure_
         // Right wall, outlet
         pressure_ptr[i][Nx - 1] = 0;
     }
-}
-
-void CFD::UpdateColors(WGPUDevice device, WGPUQueue queue) {
-    bool isMapped = false;
-    wgpuBufferMapAsync(VelocitiesStagingBuffer, WGPUMapMode_Read, 0, 8 * Nx * Ny, {
-                           .nextInChain = nullptr,
-                           .mode = WGPUCallbackMode_AllowProcessEvents,
-                           .callback = [](WGPUMapAsyncStatus status, WGPUStringView message,
-                                          WGPU_NULLABLE void *userdata1, WGPU_NULLABLE void *userdata2) {
-                               if (status != WGPUMapAsyncStatus_Success) {
-                                   std::cout << "failed to map array\n" << message.data << std::endl;
-                               }
-
-                               bool *ptr = reinterpret_cast<bool *>(userdata1);
-                               (*ptr) = true;
-                           },
-                           .userdata1 = (void *) (&isMapped),
-                       });
-    while (!isMapped) {
-        wgpuQueueSubmit(queue, 0, nullptr);
-    }
-
-    isMapped = false;
-
-    wgpuBufferMapAsync(PressureStagingBuffer, WGPUMapMode_Read, 0, 4 * Nx * Ny, {
-                           .nextInChain = nullptr,
-                           .mode = WGPUCallbackMode_AllowProcessEvents,
-                           .callback = [](WGPUMapAsyncStatus status, WGPUStringView message,
-                                          WGPU_NULLABLE void *userdata1, WGPU_NULLABLE void *userdata2) {
-                               if (status != WGPUMapAsyncStatus_Success) {
-                                   std::cout << "failed to map array\n" << message.data << std::endl;
-                               }
-
-                               bool *ptr = reinterpret_cast<bool *>(userdata1);
-                               (*ptr) = true;
-                           },
-                           .userdata1 = (void *) (&isMapped),
-                       });
-    while (!isMapped) {
-        wgpuQueueSubmit(queue, 0, nullptr);
-    }
-
-    isMapped = false;
-
-    const void *dataV = wgpuBufferGetMappedRange(VelocitiesStagingBuffer, 0, 8 * Nx * Ny);
-    const void *dataP = wgpuBufferGetMappedRange(PressureStagingBuffer, 0, 4 * Nx * Ny);
-
-    for (int i = 0; i < Ny; i++) {
-        memcpy(velocity[i].data(), (Vector2f *) dataV + i * Nx, 8 * Nx);
-        memcpy(pressure[i].data(), (float *) dataP + i * Nx, 4 * Nx);
-    }
-
-    wgpuBufferUnmap(VelocitiesStagingBuffer);
-    wgpuBufferUnmap(PressureStagingBuffer);
-
-    float maxV = -1e9;
-    float minV = 1e9;
-    for (int i = 1; i < Ny - 1; i++) {
-        for (int j = 1; j < Nx - 1; j++) {
-            // technically I should divide by dxdy, but it's simpler
-            float curl = (velocity[i][j + 1].y - velocity[i][j - 1].y) - (
-                             velocity[i + 1][j].x - velocity[i - 1][j].x);
-            float absV = std::abs(sqrt(velocity[i][j].x * velocity[i][j].x + velocity[i][j].y * velocity[i][j].y));
-
-            maxV = std::max(maxV, curl);
-            minV = std::min(minV, curl);
-        }
-    }
-
-
-    for (int i = 1; i < Ny - 1; i++) {
-        for (int j = 1; j < Nx - 1; j++) {
-            float curl = (velocity[i][j + 1].y - velocity[i][j - 1].y) - (
-                             velocity[i + 1][j].x - velocity[i - 1][j].x);
-
-            float absV = std::abs(sqrt(velocity[i][j].x * velocity[i][j].x + velocity[i][j].y * velocity[i][j].y));
-
-            auto t = (curl - minV) / (maxV - minV);
-
-            float startR = 1.0;
-            float startG = 1.0;
-            float startB = 1.0;
-
-            float endR = 0.0;
-            float endG = 0.0;
-            float endB = 1.0;
-
-            if (t <= -minV / (maxV - minV)) {
-                t /= -minV / (maxV - minV);
-
-                t *= t; // slower at start
-
-                startR = 1.0;
-                startG = 0.0;
-                startB = 0.0;
-
-                endR = 1.0;
-                endG = 1.0;
-                endB = 1.0;
-            } else {
-                t -= -minV / (maxV - minV);
-                t /= -minV / (maxV - minV);
-
-                t = (3.0 * t * t) - (2.0 * t * t * t);
-            }
-
-
-            float R = startR + t * (endR - startR);
-            float G = startG + t * (endG - startG);
-            float B = startB + t * (endB - startB);
-
-            int pIndex = 4 * (i * Nx + j);
-
-            colors[pIndex] = Vector4f(R, G, B, 1);
-            colors[pIndex + 1] = Vector4f(R, G, B, 1);
-            colors[pIndex + 2] = Vector4f(R, G, B, 1);
-            colors[pIndex + 3] = Vector4f(R, G, B, 1);
-        }
-    }
-
-    wgpuQueueWriteBuffer(queue, Colors, 0, colors.data(), colors.size() * sizeof(Vector4f));
-
-    float maxP = 0;
-    for (int i = 0; i < Ny; i++) {
-        for (int j = 0; j < Nx; j++) {
-            maxP = std::max(maxP, abs(pressure[i][j]));
-        }
-    }
-
-    if (maxP == 0) {
-        maxP = 1;
-    }
-
-    for (int i = 0; i < Ny; i++) {
-        for (int j = 0; j < Nx; j++) {
-            int pIndex = 4 * (i * Nx + j);
-
-            colors[pIndex] = Vector4f(abs(pressure[i][j]) / maxP, 0,
-                                      1 - abs(pressure[i][j]) / maxP, 1);
-            colors[pIndex + 1] = Vector4f(abs(pressure[i][j]) / maxP, 0,
-                                          1 - abs(pressure[i][j]) / maxP, 1);
-            colors[pIndex + 2] = Vector4f(abs(pressure[i][j]) / maxP, 0,
-                                          1 - abs(pressure[i][j]) / maxP, 1);
-            colors[pIndex + 3] = Vector4f(abs(pressure[i][j]) / maxP, 0,
-                                          1 - abs(pressure[i][j]) / maxP, 1);
-        }
-    }
-
-    wgpuQueueWriteBuffer(queue, PressureColor, 0, colors.data(), colors.size() * sizeof(Vector4f));
 }

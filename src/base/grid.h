@@ -4,6 +4,8 @@
 
 #ifndef GRID_H
 #define GRID_H
+#include <webgpu/webgpu.h>
+
 #include "instance.h"
 
 

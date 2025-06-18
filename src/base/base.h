@@ -8,9 +8,6 @@
 #include <vector>
 #include <math.h>
 
-#include <SDL2/SDL.h>
-#include "webgpu/webgpu.h"
-
 #define USER_SPACE 1
 #define UI_SPACE 16001
 
@@ -122,6 +119,10 @@ public:
 
     Vector4f(Vector3f v, float w): x(v.x), y(v.y), z(v.z), w(w) {
     }
+
+    Vector4f operator/(float v) {
+        return {this->x / v, this->y / v, this->z / v, this->w / v};
+    }
 };
 
 
@@ -172,13 +173,12 @@ public:
 
         return res;
     }
-
 };
 
-template <typename T>
-std::vector<T> flatten(const std::vector<std::vector<T>> & vec) {
+template<typename T>
+std::vector<T> flatten(const std::vector<std::vector<T> > &vec) {
     std::vector<T> result;
-    for (const auto & v : vec)
+    for (const auto &v: vec)
         result.insert(result.end(), v.begin(), v.end());
     return result;
 }
@@ -221,7 +221,6 @@ Vector2f Lerp(Vector2f a, Vector2f b, double t);
 Vector4f ZIndexToColor4f(int zIndex);
 
 std::vector<Vector2f> CreateCircle(Vector2f center, float radius, int segments);
-
 
 
 #endif //BASE_H

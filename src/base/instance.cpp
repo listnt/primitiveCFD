@@ -4,6 +4,7 @@
 
 #include "instance.h"
 #include <numeric>
+#include <webgpu/webgpu.h>
 
 #include <chrono> // Import the ctime library
 
@@ -21,7 +22,7 @@ void instance::LoadWGPUBuffers(WGPUDevice device, WGPUQueue queue) {
     bufferDescriptor.mappedAtCreation = false;
     Colors = wgpuDeviceCreateBuffer(device, &bufferDescriptor);
     wgpuQueueWriteBuffer(queue, Colors, 0, colors.data(), colors.size() * sizeof(Vector4f));
-
+    printf("someshit");
     bufferDescriptor.size = pickingColor.size() * sizeof(Vector4f);
     bufferDescriptor.usage = WGPUBufferUsage_CopyDst | WGPUBufferUsage_Vertex;
     bufferDescriptor.mappedAtCreation = false;
@@ -34,6 +35,12 @@ void instance::LoadWGPUBuffers(WGPUDevice device, WGPUQueue queue) {
     zIndexBuffer = wgpuDeviceCreateBuffer(device, &bufferDescriptor);
     wgpuQueueWriteBuffer(queue, zIndexBuffer, 0, zIndex.data(), zIndex.size() * sizeof(float));
 
+    bufferDescriptor.size = uv.size() * sizeof(Vector2f);
+    bufferDescriptor.usage = WGPUBufferUsage_CopyDst | WGPUBufferUsage_Vertex;
+    bufferDescriptor.mappedAtCreation = false;
+    UV = wgpuDeviceCreateBuffer(device, &bufferDescriptor);
+    wgpuQueueWriteBuffer(queue, UV, 0, uv.data(), uv.size() * sizeof(Vector2f));
+
     bufferDescriptor.size = sizeof(ModelMat);
     bufferDescriptor.usage = WGPUBufferUsage_CopyDst | WGPUBufferUsage_Vertex;
     bufferDescriptor.mappedAtCreation = false;
@@ -41,7 +48,7 @@ void instance::LoadWGPUBuffers(WGPUDevice device, WGPUQueue queue) {
     wgpuQueueWriteBuffer(queue, Model, 0, &modelMat, sizeof(ModelMat));
 }
 
-void instance::Render(WGPUDevice device,WGPUQueue queue, WGPURenderPassEncoder pass, WGPUBuffer uniforms) {
+void instance::Render(WGPUDevice device, WGPUQueue queue, WGPURenderPassEncoder pass, WGPUBuffer uniforms) {
     auto Model = translate(T.x, T.y, T.z) *
                  roll(R.z) * pitch(R.y) * yaw(R.x) *
                  scale(S.x, S.y, S.z);
@@ -53,8 +60,9 @@ void instance::Render(WGPUDevice device,WGPUQueue queue, WGPURenderPassEncoder p
     wgpuRenderPassEncoderSetVertexBuffer(pass, 0, Positions, 0, points.size() * sizeof(Vector2f));
     wgpuRenderPassEncoderSetVertexBuffer(pass, 1, Colors, 0, colors.size() * sizeof(Vector4f));
     wgpuRenderPassEncoderSetVertexBuffer(pass, 2, zIndexBuffer, 0, zIndex.size() * sizeof(float));
+    wgpuRenderPassEncoderSetVertexBuffer(pass, 3, UV, 0, uv.size() * sizeof(Vector2f));
 
-    wgpuRenderPassEncoderSetVertexBuffer(pass, 3, this->Model, 0, sizeof(ModelMat));
+    wgpuRenderPassEncoderSetVertexBuffer(pass, 4, this->Model, 0, sizeof(ModelMat));
 
     if (points.size() < 2) {
         return;
@@ -75,8 +83,9 @@ void instance::Picking(WGPUQueue queue, WGPURenderPassEncoder pass, WGPUBuffer u
     wgpuRenderPassEncoderSetVertexBuffer(pass, 0, Positions, 0, points.size() * sizeof(Vector2f));
     wgpuRenderPassEncoderSetVertexBuffer(pass, 1, PickingColor, 0, pickingColor.size() * sizeof(Vector4f));
     wgpuRenderPassEncoderSetVertexBuffer(pass, 2, zIndexBuffer, 0, zIndex.size() * sizeof(float));
+    wgpuRenderPassEncoderSetVertexBuffer(pass, 3, UV, 0, uv.size() * sizeof(Vector2f));
 
-    wgpuRenderPassEncoderSetVertexBuffer(pass, 3, this->Model, 0, sizeof(ModelMat));
+    wgpuRenderPassEncoderSetVertexBuffer(pass, 4, this->Model, 0, sizeof(ModelMat));
 }
 
 void instance::Transform(Vector3f T) { this->T = T; }

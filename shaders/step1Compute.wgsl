@@ -2,7 +2,8 @@ struct Uniforms {
     step: f32,
     dt: f32,
     rho: f32,
-    kinematicViscosity: f32
+    kinematicViscosity: f32,
+    velocityIntake: f32
 }
 
 @group(0) @binding(0) var inputVelocity: texture_2d<f32>;
@@ -21,8 +22,27 @@ fn computeNewVelocities(@builtin(global_invocation_id) id: vec3<u32>){
 
     let v = textureLoad(inputVelocity,vec2<u32>(id.x,id.y),0);
 
-    if (mask.r != 255){
-        textureStore(outputVelocity,vec2<u32>(id.x,id.y), v);
+    if (mask.r == 1){
+        textureStore(outputVelocity,vec2<u32>(id.x,id.y), vec4<f32>(cfd.velocityIntake,0,0,0));
+    }else if (mask.r ==0){ // if wall
+        textureStore(outputVelocity,vec2<u32>(id.x,id.y), vec4<f32>(0,0,0,0));
+    }else if (mask.r == 2){ // if outlet
+        let r = textureLoad(stencilMask,vec2<u32>(id.x + 1,id.y), 0);
+        let l = textureLoad(stencilMask,vec2<u32>(id.x - 1,id.y), 0);
+        let t = textureLoad(stencilMask,vec2<u32>(id.x,id.y + 1), 0);
+        let b = textureLoad(stencilMask,vec2<u32>(id.x,id.y - 1), 0);
+
+        if (l.x==255){
+            textureStore(outputVelocity,vec2<u32>(id.x,id.y), w);
+        }else if(r.x==255){
+            textureStore(outputVelocity,vec2<u32>(id.x,id.y), e);
+        }else if(t.x==255){
+            textureStore(outputVelocity,vec2<u32>(id.x,id.y), n);
+        }else if(b.x==255){
+            textureStore(outputVelocity,vec2<u32>(id.x,id.y), s);
+        }else{
+            textureStore(outputVelocity,vec2<u32>(id.x,id.y), vec4<f32>(0,0,0,0));
+        }
     }else{
         let fx = upwind(v.x);
         let fy = upwind(v.y);
