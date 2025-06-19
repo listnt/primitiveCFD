@@ -42,28 +42,14 @@ protected:
 
     bool requestEnded = false;
 
-    // std::shared_ptr<PickingTexture> pickingTexture = std::make_shared<PickingTexture>();
-    //
-    // std::unordered_map<int, std::shared_ptr<Line> > lines;
     std::shared_ptr<grid> gridV;
     Matrix4x4 projection;
     Matrix4x4 camera;
-    // int focusedObj = -1;
-    // bool isCaptured = false;
     bool isMouseDown = false;
-    // bool isContextOpen = false;
-    // bool disablePanning = false;
-    // int mouseClickedX = 0, mouseClickedY = 0;
+    int mouseClickedX = 0, mouseClickedY = 0;
+
     float left = -25, right = 25, bottom = -25, top = 25, stepx = 1, stepy = 1;;
     int kWidth, kHeight;
-    // int selectedInstrument = 0;
-    // const std::vector<char *> instruments = {
-    //     "pointer",
-    //     "line",
-    //     "bizier",
-    // };
-    //
-    // Vector4f currentColor = {1, 1, 1, 1};
 
     std::shared_ptr<CFD> cfd;
 

@@ -779,28 +779,52 @@ float CFD::getDt() {
     return dt;
 }
 
-void CFD::DrawObstacle(WGPUQueue queue, float x, float y) {
-    int j = x / lx * Nx;
-    int i = y / ly * Ny;
+void CFD::DrawLine(WGPUQueue queue, float x0, float y0, float x1, float y1) {
+    int x0i = x0 / lx * Nx;
+    int y0i = y0 / ly * Ny;
 
-    if (i < Ny && i > 0 && j < Nx && j > 0) {
-        stencilMask[i][j] = 0;
-    }
+    int x1i = x1 / lx * Nx;
+    int y1i = y1 / ly * Ny;
 
-    if (i - 1 < Ny && i - 1 > 0 && j < Nx && j > 0) {
-        stencilMask[i - 1][j] = 0;
-    }
+    int dx = abs(x1i - x0i), sx = x0i < x1i ? 1 : -1;
+    int dy = -abs(y1i - y0i), sy = y0i < y1i ? 1 : -1;
+    int err = dx + dy, e2; /* error value e_xy */
 
-    if (i < Ny && i > 0 && j + 1 < Nx && j + 1 > 0) {
-        stencilMask[i][j + 1] = 0;
-    }
+    for (;;) {
+        /* loop */
+        int j = x0i;
+        int i = y0i;
 
-    if (i + 1 < Ny && i + 1 > 0 && j < Nx && j > 0) {
-        stencilMask[i + 1][j] = 0;
-    }
+        if (i < Ny && i > 0 && j < Nx && j > 0) {
+            stencilMask[i][j] = 0;
+        }
 
-    if (i < Ny && i > 0 && j - 1 < Nx && j - 1 > 0) {
-        stencilMask[i][j - 1] = 0;
+        if (i - 1 < Ny && i - 1 > 0 && j < Nx && j > 0) {
+            stencilMask[i - 1][j] = 0;
+        }
+
+        if (i < Ny && i > 0 && j + 1 < Nx && j + 1 > 0) {
+            stencilMask[i][j + 1] = 0;
+        }
+
+        if (i + 1 < Ny && i + 1 > 0 && j < Nx && j > 0) {
+            stencilMask[i + 1][j] = 0;
+        }
+
+        if (i < Ny && i > 0 && j - 1 < Nx && j - 1 > 0) {
+            stencilMask[i][j - 1] = 0;
+        }
+
+        if (x0i == x1i && y0i == y1i) break;
+        e2 = 2 * err;
+        if (e2 >= dy) {
+            err += dy;
+            x0i += sx;
+        } /* e_xy+e_x > 0 */
+        if (e2 <= dx) {
+            err += dx;
+            y0i += sy;
+        } /* e_xy+e_y < 0 */
     }
 
     WGPUExtent3D extent;

@@ -97,6 +97,9 @@ void App::RenderPhase() const {
 bool App::mouseControlDown(int eventType, const EmscriptenMouseEvent *e, void *) {
     if (e->button == 0) {
         isMouseDown = true;
+
+        mouseClickedX = e->targetX;
+        mouseClickedY = e->targetY;
     }
 
     return true;
@@ -121,7 +124,14 @@ bool App::mouseControlMove(int eventType, const EmscriptenMouseEvent *e, void *)
 
         // p = p / p.w;
 
-        cfd->DrawObstacle(wgpuQueue, p.x, p.y);
+        auto prev = Vector4f(2.0 * (float) mouseClickedX / kWidth,
+                             2.0f * (1.0f - (float) mouseClickedY / kHeight), 0, 1);
+        prev = inv * prev;
+
+        cfd->DrawLine(wgpuQueue, prev.x, prev.y, p.x, p.y);
+
+        mouseClickedX = e->targetX;
+        mouseClickedY = e->targetY;
     }
 
     return true;

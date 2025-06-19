@@ -152,7 +152,7 @@ public:
 
     float getDt();
 
-    void DrawObstacle(WGPUQueue queue, float x, float y);
+    void DrawLine(WGPUQueue queue, float x0, float y0, float x1, float y1);
 };
 
 #endif //CFD_H
